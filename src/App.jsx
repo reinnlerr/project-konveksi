@@ -1,0 +1,193 @@
+import { useState } from "react";
+import { Navigate, Route, Routes, useNavigate } from "react-router-dom";
+import ProtectedRoute from "./components/ProtectedRoute";
+import useAuth from "./hooks/useAuth";
+import Dashboard from "./pages/Dashboard";
+import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
+import RoleSelectionPage from "./pages/RoleSelectionPage";
+
+function App() {
+  const navigate = useNavigate();
+  const { user, login, register, logout } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [loginError, setLoginError] = useState("");
+  const [registerError, setRegisterError] = useState("");
+  const [loginSuccess, setLoginSuccess] = useState("");
+  const [registerSuccess, setRegisterSuccess] = useState("");
+
+  const handleLogin = (e) => {
+    e.preventDefault();
+    const form = new FormData(e.currentTarget);
+    const email = String(form.get("email") || "").trim();
+    const password = String(form.get("password") || "").trim();
+
+    if (!email || !password) {
+      setLoginError("Email dan password wajib diisi.");
+      setLoginSuccess("");
+      return;
+    }
+
+    setLoading(true);
+    setLoginError("");
+    setLoginSuccess("");
+
+    window.setTimeout(() => {
+      const result = login({ email, password });
+      if (!result.ok) {
+        setLoading(false);
+        setLoginError(result.message);
+        setLoginSuccess("");
+        return;
+      }
+
+      setLoginSuccess(result.message);
+      setLoading(false);
+      window.setTimeout(() => {
+        if (result.user.role === "admin") {
+          navigate("/dashboard");
+        } else if (["bahan", "cutting", "jahit", "finishing", "pengiriman"].includes(result.user.role)) {
+          navigate(`/role/${result.user.role}`);
+        } else {
+          navigate("/select-role");
+        }
+      }, 250);
+    }, 700);
+  };
+
+  const handleRegister = (e) => {
+    e.preventDefault();
+    const form = new FormData(e.currentTarget);
+    const fullName = String(form.get("fullName") || "").trim();
+    const email = String(form.get("email") || "").trim();
+    const password = String(form.get("password") || "");
+    const confirmPassword = String(form.get("confirmPassword") || "");
+
+    if (!fullName || !email || !password || !confirmPassword) {
+      setRegisterError("Semua field wajib diisi.");
+      setRegisterSuccess("");
+      return;
+    }
+    if (password.length < 6) {
+      setRegisterError("Password minimal 6 karakter.");
+      setRegisterSuccess("");
+      return;
+    }
+    if (password !== confirmPassword) {
+      setRegisterError("Konfirmasi password tidak cocok.");
+      setRegisterSuccess("");
+      return;
+    }
+
+    setRegisterError("");
+    setRegisterSuccess("");
+    setLoading(true);
+
+    window.setTimeout(() => {
+      const result = register({ name: fullName, email, password });
+      setLoading(false);
+
+      if (!result.ok) {
+        setRegisterError(result.message);
+        setRegisterSuccess("");
+        return;
+      }
+
+      setRegisterSuccess(result.message);
+      setLoginSuccess("Register berhasil. Silakan login.");
+      window.setTimeout(() => navigate("/login"), 250);
+    }, 700);
+  };
+
+  const selectRole = (role) => {
+    navigate(`/role/${role.toLowerCase()}`);
+  };
+
+  const handleLogout = () => {
+    logout();
+    setLoginError("");
+    setRegisterError("");
+    setLoginSuccess("");
+    setRegisterSuccess("");
+    navigate("/login");
+  };
+
+  return (
+    <Routes>
+      <Route path="/" element={<Navigate to="/login" replace />} />
+      <Route
+        path="/login"
+        element={<LoginPage onLogin={handleLogin} loading={loading} error={loginError} success={loginSuccess} />}
+      />
+      <Route
+        path="/register"
+        element={
+          <RegisterPage
+            onRegister={handleRegister}
+            loading={loading}
+            error={registerError}
+            success={registerSuccess}
+          />
+        }
+      />
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute isAllowed={user?.role === "admin"}>
+            <Dashboard user={user} onLogout={handleLogout} />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/select-role"
+        element={
+          <ProtectedRoute isAllowed={Boolean(user) && user?.role !== "admin"}>
+            <RoleSelectionPage onSelectRole={selectRole} />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/role/bahan"
+        element={
+          <ProtectedRoute isAllowed={Boolean(user)}>
+            <Dashboard user={user} dashboardRole="bahan" initialPage="Dashboard" onLogout={handleLogout} />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/role/cutting"
+        element={
+          <ProtectedRoute isAllowed={Boolean(user)}>
+            <Dashboard user={user} dashboardRole="cutting" initialPage="Dashboard" onLogout={handleLogout} />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/role/jahit"
+        element={
+          <ProtectedRoute isAllowed={Boolean(user)}>
+            <Dashboard user={user} dashboardRole="jahit" initialPage="Dashboard" onLogout={handleLogout} />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/role/finishing"
+        element={
+          <ProtectedRoute isAllowed={Boolean(user)}>
+            <Dashboard user={user} dashboardRole="finishing" initialPage="Dashboard" onLogout={handleLogout} />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/role/pengiriman"
+        element={
+          <ProtectedRoute isAllowed={Boolean(user)}>
+            <Dashboard user={user} dashboardRole="pengiriman" initialPage="Dashboard" onLogout={handleLogout} />
+          </ProtectedRoute>
+        }
+      />
+    </Routes>
+  );
+}
+
+export default App;
