@@ -1,30 +1,57 @@
 <?php
-// Mengizinkan frontend (React) untuk mengakses API ini
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=UTF-8");
+header("Access-Control-Allow-Methods: POST");
 
-// Menyisipkan file koneksi database yang sudah dibuat tadi
 include "koneksi.php";
 
-// Menangkap data username dan password yang dikirim oleh pengguna
-// (Untuk uji coba cepat di browser, kita pakai metode GET dulu)
-$username = isset($_GET['username']) ? $_GET['username'] : '';
-$password = isset($_GET['password']) ? $_GET['password'] : '';
+// Ambil data dari React (dikirim dalam format JSON)
+$data = json_decode(file_get_contents("php://input"), true);
 
-// Periksa apakah username dan password cocok dengan data dummy di database
-if ($username === 'admin_konveksi' && $password === 'password123') {
+$email    = isset($data['email']) ? trim($data['email']) : '';
+$password = isset($data['password']) ? $data['password'] : '';
+
+// Validasi input kosong
+if (empty($email) || empty($password)) {
     echo json_encode([
-        "status" => "success",
-        "message" => "Selamat datang! Login berhasil.",
-        "data" => [
-            "username" => $username,
-            "role" => "admin"
+        "status"  => "error",
+        "message" => "Email dan password wajib diisi."
+    ]);
+    exit;
+}
+
+// Validasi format email
+if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+    echo json_encode([
+        "status"  => "error",
+        "message" => "Format email tidak valid."
+    ]);
+    exit;
+}
+
+// Cari user berdasarkan email
+$stmt = mysqli_prepare($koneksi, "SELECT id, full_name, email, password, role FROM users WHERE email = ?");
+mysqli_stmt_bind_param($stmt, "s", $email);
+mysqli_stmt_execute($stmt);
+$result = mysqli_stmt_get_result($stmt);
+$user   = mysqli_fetch_assoc($result);
+
+// Cek user & verifikasi password
+if ($user && password_verify($password, $user['password'])) {
+    echo json_encode([
+        "status"  => "success",
+        "message" => "Login berhasil!",
+        "data"    => [
+            "id"        => $user['id'],
+            "full_name" => $user['full_name'],
+            "email"     => $user['email'],
+            "role"      => $user['role']
         ]
     ]);
 } else {
     echo json_encode([
-        "status" => "error",
-        "message" => "Username atau password salah, silakan coba lagi."
+        "status"  => "error",
+        "message" => "Email atau password salah."
     ]);
 }
 ?>
