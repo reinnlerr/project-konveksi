@@ -16,7 +16,7 @@ function App() {
   const [loginSuccess, setLoginSuccess] = useState("");
   const [registerSuccess, setRegisterSuccess] = useState("");
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
     const email = String(form.get("email") || "").trim();
@@ -32,38 +32,35 @@ function App() {
     setLoginError("");
     setLoginSuccess("");
 
-    window.setTimeout(() => {
-      const result = login({ email, password });
-      if (!result.ok) {
-        setLoading(false);
-        setLoginError(result.message);
-        setLoginSuccess("");
-        return;
-      }
+    const result = await login({ email, password });
 
-      setLoginSuccess(result.message);
+    if (!result.ok) {
       setLoading(false);
-      window.setTimeout(() => {
-        if (result.user.role === "admin") {
-          navigate("/dashboard");
-        } else if (["bahan", "cutting", "jahit", "finishing", "pengiriman"].includes(result.user.role)) {
-          navigate(`/role/${result.user.role}`);
-        } else {
-          navigate("/select-role");
-        }
-      }, 250);
-    }, 700);
+      setLoginError(result.message);
+      setLoginSuccess("");
+      return;
+    }
+
+    setLoginSuccess(result.message);
+    setLoading(false);
+
+    if (result.user.role === "admin") {
+      navigate("/dashboard");
+    } else if (["bahan", "cutting", "jahit", "finishing", "pengiriman"].includes(result.user.role)) {
+      navigate(`/role/${result.user.role}`);
+    } else {
+      navigate("/select-role");
+    }
   };
 
-  const handleRegister = (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
-    const fullName = String(form.get("fullName") || "").trim();
     const email = String(form.get("email") || "").trim();
     const password = String(form.get("password") || "");
     const confirmPassword = String(form.get("confirmPassword") || "");
 
-    if (!fullName || !email || !password || !confirmPassword) {
+    if (!email || !password || !confirmPassword) {
       setRegisterError("Semua field wajib diisi.");
       setRegisterSuccess("");
       return;
@@ -83,20 +80,18 @@ function App() {
     setRegisterSuccess("");
     setLoading(true);
 
-    window.setTimeout(() => {
-      const result = register({ name: fullName, email, password });
-      setLoading(false);
+    const result = await register({ email, password, confirmPassword });
+    setLoading(false);
 
-      if (!result.ok) {
-        setRegisterError(result.message);
-        setRegisterSuccess("");
-        return;
-      }
+    if (!result.ok) {
+      setRegisterError(result.message);
+      setRegisterSuccess("");
+      return;
+    }
 
-      setRegisterSuccess(result.message);
-      setLoginSuccess("Register berhasil. Silakan login.");
-      window.setTimeout(() => navigate("/login"), 250);
-    }, 700);
+    setRegisterSuccess(result.message);
+    setLoginSuccess("Register berhasil. Silakan login.");
+    navigate("/login");
   };
 
   const selectRole = (role) => {

@@ -9,13 +9,16 @@ export default function useAuth() {
     setUser(getCurrentUser());
   }, []);
 
-  const login = (payload) => {
-    const result = loginUser(payload);
+  const login = async (payload) => {
+    const result = await loginUser(payload);
     if (result.ok) setUser(result.user);
     return result;
   };
 
-  const register = (payload) => registerUser(payload);
+  const register = async (payload) => {
+    const result = await registerUser(payload);
+    return result;
+  };
 
   const logout = () => {
     logoutUser();
