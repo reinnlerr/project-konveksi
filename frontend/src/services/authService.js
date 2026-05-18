@@ -50,3 +50,20 @@ export function getCurrentUser() {
 export function logoutUser() {
   localStorage.removeItem("currentUser");
 }
+
+// Tambahan ini aja yang baru! ⬇️
+export async function getUsers() {
+  try {
+    const response = await fetch(`${API_URL}/users.php`, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    });
+    const data = await response.json();
+    if (data.status === "success") {
+      return data.data;
+    }
+    return [];
+  } catch (error) {
+    return [];
+  }
+}
