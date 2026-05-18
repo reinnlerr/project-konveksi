@@ -10,13 +10,15 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 switch ($method) {
 
-    // Ambil semua data finishing
     case 'GET':
         $result = mysqli_query($koneksi, "
-            SELECT id, batch_id, jumlah_masuk, jumlah_lolos, 
-                   jumlah_revisi, status, tanggal, keterangan 
-            FROM finishing 
-            ORDER BY tanggal DESC
+            SELECT f.id_finishing, f.id_batch, ba.nama_batch,
+                   f.jumlah_hasil, f.status, f.tanggal, f.id_user,
+                   u.Email as nama_user
+            FROM finishing f
+            LEFT JOIN batch ba ON f.id_batch = ba.id_batch
+            LEFT JOIN users u ON f.id_user = u.id_user
+            ORDER BY f.tanggal DESC
         ");
 
         $data = [];
@@ -30,40 +32,36 @@ switch ($method) {
         ]);
         break;
 
-    // Tambah data finishing
     case 'POST':
         $input = json_decode(file_get_contents("php://input"), true);
 
-        $batch_id      = isset($input['batch_id']) ? $input['batch_id'] : '';
-        $jumlah_masuk  = isset($input['jumlah_masuk']) ? $input['jumlah_masuk'] : '';
-        $jumlah_lolos  = isset($input['jumlah_lolos']) ? $input['jumlah_lolos'] : 0;
-        $jumlah_revisi = isset($input['jumlah_revisi']) ? $input['jumlah_revisi'] : 0;
-        $status        = isset($input['status']) ? trim($input['status']) : 'proses';
-        $keterangan    = isset($input['keterangan']) ? trim($input['keterangan']) : '';
+        $id_batch     = isset($input['id_batch']) ? $input['id_batch'] : '';
+        $jumlah_hasil = isset($input['jumlah_hasil']) ? $input['jumlah_hasil'] : '';
+        $status       = isset($input['status']) ? trim($input['status']) : 'proses';
+        $id_user      = isset($input['id_user']) ? $input['id_user'] : '';
+        $tanggal      = isset($input['tanggal']) ? $input['tanggal'] : date('Y-m-d');
 
-        // Validasi
-        if (empty($batch_id) || empty($jumlah_masuk)) {
+        if (empty($id_batch) || empty($jumlah_hasil) || empty($id_user)) {
             echo json_encode([
                 "status"  => "error",
-                "message" => "Batch dan jumlah masuk wajib diisi."
+                "message" => "Batch, jumlah hasil, dan user wajib diisi."
             ]);
             exit;
         }
 
-        // Validasi jumlah lolos + revisi tidak melebihi jumlah masuk
-        if (($jumlah_lolos + $jumlah_revisi) > $jumlah_masuk) {
+        if ($jumlah_hasil <= 0) {
             echo json_encode([
                 "status"  => "error",
-                "message" => "Jumlah lolos dan revisi tidak boleh melebihi jumlah masuk."
+                "message" => "Jumlah hasil harus lebih dari 0."
             ]);
             exit;
         }
 
         $stmt = mysqli_prepare($koneksi, "
-            INSERT INTO finishing (batch_id, jumlah_masuk, jumlah_lolos, jumlah_revisi, status, keterangan, tanggal) 
-            VALUES (?, ?, ?, ?, ?, ?, NOW())
+            INSERT INTO finishing (id_batch, jumlah_hasil, status, tanggal, id_user) 
+            VALUES (?, ?, ?, ?, ?)
         ");
-        mysqli_stmt_bind_param($stmt, "iiiiss", $batch_id, $jumlah_masuk, $jumlah_lolos, $jumlah_revisi, $status, $keterangan);
+        mysqli_stmt_bind_param($stmt, "iissi", $id_batch, $jumlah_hasil, $status, $tanggal, $id_user);
 
         if (mysqli_stmt_execute($stmt)) {
             echo json_encode([
@@ -78,18 +76,16 @@ switch ($method) {
         }
         break;
 
-    // Update data finishing
     case 'PUT':
         $input = json_decode(file_get_contents("php://input"), true);
 
-        $id            = isset($input['id']) ? $input['id'] : '';
-        $jumlah_masuk  = isset($input['jumlah_masuk']) ? $input['jumlah_masuk'] : '';
-        $jumlah_lolos  = isset($input['jumlah_lolos']) ? $input['jumlah_lolos'] : '';
-        $jumlah_revisi = isset($input['jumlah_revisi']) ? $input['jumlah_revisi'] : '';
-        $status        = isset($input['status']) ? trim($input['status']) : '';
-        $keterangan    = isset($input['keterangan']) ? trim($input['keterangan']) : '';
+        $id_finishing = isset($input['id_finishing']) ? $input['id_finishing'] : '';
+        $jumlah_hasil = isset($input['jumlah_hasil']) ? $input['jumlah_hasil'] : '';
+        $status       = isset($input['status']) ? trim($input['status']) : '';
+        $tanggal      = isset($input['tanggal']) ? $input['tanggal'] : '';
+        $id_user      = isset($input['id_user']) ? $input['id_user'] : '';
 
-        if (empty($id) || empty($jumlah_masuk) || empty($status)) {
+        if (empty($id_finishing) || empty($jumlah_hasil) || empty($status) || empty($id_user)) {
             echo json_encode([
                 "status"  => "error",
                 "message" => "Data tidak lengkap."
@@ -97,21 +93,12 @@ switch ($method) {
             exit;
         }
 
-        // Validasi jumlah lolos + revisi tidak melebihi jumlah masuk
-        if (($jumlah_lolos + $jumlah_revisi) > $jumlah_masuk) {
-            echo json_encode([
-                "status"  => "error",
-                "message" => "Jumlah lolos dan revisi tidak boleh melebihi jumlah masuk."
-            ]);
-            exit;
-        }
-
         $stmt = mysqli_prepare($koneksi, "
             UPDATE finishing 
-            SET jumlah_masuk = ?, jumlah_lolos = ?, jumlah_revisi = ?, status = ?, keterangan = ? 
-            WHERE id = ?
+            SET jumlah_hasil = ?, status = ?, tanggal = ?, id_user = ? 
+            WHERE id_finishing = ?
         ");
-        mysqli_stmt_bind_param($stmt, "iiissi", $jumlah_masuk, $jumlah_lolos, $jumlah_revisi, $status, $keterangan, $id);
+        mysqli_stmt_bind_param($stmt, "issii", $jumlah_hasil, $status, $tanggal, $id_user, $id_finishing);
 
         if (mysqli_stmt_execute($stmt)) {
             echo json_encode([
@@ -126,12 +113,11 @@ switch ($method) {
         }
         break;
 
-    // Hapus data finishing
     case 'DELETE':
         $input = json_decode(file_get_contents("php://input"), true);
-        $id = isset($input['id']) ? $input['id'] : '';
+        $id_finishing = isset($input['id_finishing']) ? $input['id_finishing'] : '';
 
-        if (empty($id)) {
+        if (empty($id_finishing)) {
             echo json_encode([
                 "status"  => "error",
                 "message" => "ID tidak ditemukan."
@@ -139,8 +125,8 @@ switch ($method) {
             exit;
         }
 
-        $stmt = mysqli_prepare($koneksi, "DELETE FROM finishing WHERE id = ?");
-        mysqli_stmt_bind_param($stmt, "i", $id);
+        $stmt = mysqli_prepare($koneksi, "DELETE FROM finishing WHERE id_finishing = ?");
+        mysqli_stmt_bind_param($stmt, "i", $id_finishing);
 
         if (mysqli_stmt_execute($stmt)) {
             echo json_encode([

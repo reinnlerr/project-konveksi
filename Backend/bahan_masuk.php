@@ -10,12 +10,13 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 switch ($method) {
 
-    // Ambil semua data bahan masuk
     case 'GET':
         $result = mysqli_query($koneksi, "
-            SELECT id, nama_bahan, jumlah, satuan, batch_id, tanggal, keterangan 
-            FROM bahan_masuk 
-            ORDER BY tanggal DESC
+            SELECT b.id_bahan, b.id_batch, ba.nama_batch, 
+                   b.nama_bahan, b.jumlah, b.tanggal 
+            FROM bahan_masuk b
+            LEFT JOIN batch ba ON b.id_batch = ba.id_batch
+            ORDER BY b.tanggal DESC
         ");
 
         $data = [];
@@ -29,30 +30,27 @@ switch ($method) {
         ]);
         break;
 
-    // Tambah data bahan masuk
     case 'POST':
         $input = json_decode(file_get_contents("php://input"), true);
 
-        $nama_bahan  = isset($input['nama_bahan']) ? trim($input['nama_bahan']) : '';
-        $jumlah      = isset($input['jumlah']) ? $input['jumlah'] : '';
-        $satuan      = isset($input['satuan']) ? trim($input['satuan']) : '';
-        $batch_id    = isset($input['batch_id']) ? $input['batch_id'] : '';
-        $keterangan  = isset($input['keterangan']) ? trim($input['keterangan']) : '';
+        $id_batch   = isset($input['id_batch']) ? $input['id_batch'] : '';
+        $nama_bahan = isset($input['nama_bahan']) ? trim($input['nama_bahan']) : '';
+        $jumlah     = isset($input['jumlah']) ? $input['jumlah'] : '';
+        $tanggal    = isset($input['tanggal']) ? $input['tanggal'] : date('Y-m-d');
 
-        // Validasi
-        if (empty($nama_bahan) || empty($jumlah) || empty($satuan) || empty($batch_id)) {
+        if (empty($id_batch) || empty($nama_bahan) || empty($jumlah)) {
             echo json_encode([
                 "status"  => "error",
-                "message" => "Nama bahan, jumlah, satuan, dan batch wajib diisi."
+                "message" => "Batch, nama bahan, dan jumlah wajib diisi."
             ]);
             exit;
         }
 
         $stmt = mysqli_prepare($koneksi, "
-            INSERT INTO bahan_masuk (nama_bahan, jumlah, satuan, batch_id, keterangan, tanggal) 
-            VALUES (?, ?, ?, ?, ?, NOW())
+            INSERT INTO bahan_masuk (id_batch, nama_bahan, jumlah, tanggal) 
+            VALUES (?, ?, ?, ?)
         ");
-        mysqli_stmt_bind_param($stmt, "sdsis", $nama_bahan, $jumlah, $satuan, $batch_id, $keterangan);
+        mysqli_stmt_bind_param($stmt, "isis", $id_batch, $nama_bahan, $jumlah, $tanggal);
 
         if (mysqli_stmt_execute($stmt)) {
             echo json_encode([
@@ -67,17 +65,15 @@ switch ($method) {
         }
         break;
 
-    // Update data bahan masuk
     case 'PUT':
         $input = json_decode(file_get_contents("php://input"), true);
 
-        $id         = isset($input['id']) ? $input['id'] : '';
+        $id_bahan   = isset($input['id_bahan']) ? $input['id_bahan'] : '';
         $nama_bahan = isset($input['nama_bahan']) ? trim($input['nama_bahan']) : '';
         $jumlah     = isset($input['jumlah']) ? $input['jumlah'] : '';
-        $satuan     = isset($input['satuan']) ? trim($input['satuan']) : '';
-        $keterangan = isset($input['keterangan']) ? trim($input['keterangan']) : '';
+        $tanggal    = isset($input['tanggal']) ? $input['tanggal'] : '';
 
-        if (empty($id) || empty($nama_bahan) || empty($jumlah) || empty($satuan)) {
+        if (empty($id_bahan) || empty($nama_bahan) || empty($jumlah)) {
             echo json_encode([
                 "status"  => "error",
                 "message" => "Data tidak lengkap."
@@ -87,10 +83,10 @@ switch ($method) {
 
         $stmt = mysqli_prepare($koneksi, "
             UPDATE bahan_masuk 
-            SET nama_bahan = ?, jumlah = ?, satuan = ?, keterangan = ? 
-            WHERE id = ?
+            SET nama_bahan = ?, jumlah = ?, tanggal = ? 
+            WHERE id_bahan = ?
         ");
-        mysqli_stmt_bind_param($stmt, "sdssі", $nama_bahan, $jumlah, $satuan, $keterangan, $id);
+        mysqli_stmt_bind_param($stmt, "sisi", $nama_bahan, $jumlah, $tanggal, $id_bahan);
 
         if (mysqli_stmt_execute($stmt)) {
             echo json_encode([
@@ -105,12 +101,11 @@ switch ($method) {
         }
         break;
 
-    // Hapus data bahan masuk
     case 'DELETE':
         $input = json_decode(file_get_contents("php://input"), true);
-        $id = isset($input['id']) ? $input['id'] : '';
+        $id_bahan = isset($input['id_bahan']) ? $input['id_bahan'] : '';
 
-        if (empty($id)) {
+        if (empty($id_bahan)) {
             echo json_encode([
                 "status"  => "error",
                 "message" => "ID tidak ditemukan."
@@ -118,8 +113,8 @@ switch ($method) {
             exit;
         }
 
-        $stmt = mysqli_prepare($koneksi, "DELETE FROM bahan_masuk WHERE id = ?");
-        mysqli_stmt_bind_param($stmt, "i", $id);
+        $stmt = mysqli_prepare($koneksi, "DELETE FROM bahan_masuk WHERE id_bahan = ?");
+        mysqli_stmt_bind_param($stmt, "i", $id_bahan);
 
         if (mysqli_stmt_execute($stmt)) {
             echo json_encode([

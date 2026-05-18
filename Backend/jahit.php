@@ -10,13 +10,15 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 switch ($method) {
 
-    // Ambil semua data jahit
     case 'GET':
         $result = mysqli_query($koneksi, "
-            SELECT id, batch_id, nama_penjahit, jumlah_jahit, 
-                   jumlah_selesai, status, tanggal, keterangan 
-            FROM jahit 
-            ORDER BY tanggal DESC
+            SELECT j.id_jahit, j.id_batch, ba.nama_batch,
+                   j.jumlah_hasil, j.status, j.tanggal, j.id_user,
+                   u.Email as nama_user
+            FROM jahit j
+            LEFT JOIN batch ba ON j.id_batch = ba.id_batch
+            LEFT JOIN users u ON j.id_user = u.id_user
+            ORDER BY j.tanggal DESC
         ");
 
         $data = [];
@@ -30,31 +32,36 @@ switch ($method) {
         ]);
         break;
 
-    // Tambah data jahit
     case 'POST':
         $input = json_decode(file_get_contents("php://input"), true);
 
-        $batch_id      = isset($input['batch_id']) ? $input['batch_id'] : '';
-        $nama_penjahit = isset($input['nama_penjahit']) ? trim($input['nama_penjahit']) : '';
-        $jumlah_jahit  = isset($input['jumlah_jahit']) ? $input['jumlah_jahit'] : '';
-        $jumlah_selesai = isset($input['jumlah_selesai']) ? $input['jumlah_selesai'] : 0;
-        $status        = isset($input['status']) ? trim($input['status']) : 'proses';
-        $keterangan    = isset($input['keterangan']) ? trim($input['keterangan']) : '';
+        $id_batch     = isset($input['id_batch']) ? $input['id_batch'] : '';
+        $jumlah_hasil = isset($input['jumlah_hasil']) ? $input['jumlah_hasil'] : '';
+        $status       = isset($input['status']) ? trim($input['status']) : 'proses';
+        $id_user      = isset($input['id_user']) ? $input['id_user'] : '';
+        $tanggal      = isset($input['tanggal']) ? $input['tanggal'] : date('Y-m-d');
 
-        // Validasi
-        if (empty($batch_id) || empty($nama_penjahit) || empty($jumlah_jahit)) {
+        if (empty($id_batch) || empty($jumlah_hasil) || empty($id_user)) {
             echo json_encode([
                 "status"  => "error",
-                "message" => "Batch, nama penjahit, dan jumlah jahit wajib diisi."
+                "message" => "Batch, jumlah hasil, dan user wajib diisi."
+            ]);
+            exit;
+        }
+
+        if ($jumlah_hasil <= 0) {
+            echo json_encode([
+                "status"  => "error",
+                "message" => "Jumlah hasil harus lebih dari 0."
             ]);
             exit;
         }
 
         $stmt = mysqli_prepare($koneksi, "
-            INSERT INTO jahit (batch_id, nama_penjahit, jumlah_jahit, jumlah_selesai, status, keterangan, tanggal) 
-            VALUES (?, ?, ?, ?, ?, ?, NOW())
+            INSERT INTO jahit (id_batch, jumlah_hasil, status, tanggal, id_user) 
+            VALUES (?, ?, ?, ?, ?)
         ");
-        mysqli_stmt_bind_param($stmt, "isiiss", $batch_id, $nama_penjahit, $jumlah_jahit, $jumlah_selesai, $status, $keterangan);
+        mysqli_stmt_bind_param($stmt, "iissi", $id_batch, $jumlah_hasil, $status, $tanggal, $id_user);
 
         if (mysqli_stmt_execute($stmt)) {
             echo json_encode([
@@ -69,18 +76,16 @@ switch ($method) {
         }
         break;
 
-    // Update data jahit
     case 'PUT':
         $input = json_decode(file_get_contents("php://input"), true);
 
-        $id             = isset($input['id']) ? $input['id'] : '';
-        $nama_penjahit  = isset($input['nama_penjahit']) ? trim($input['nama_penjahit']) : '';
-        $jumlah_jahit   = isset($input['jumlah_jahit']) ? $input['jumlah_jahit'] : '';
-        $jumlah_selesai = isset($input['jumlah_selesai']) ? $input['jumlah_selesai'] : '';
-        $status         = isset($input['status']) ? trim($input['status']) : '';
-        $keterangan     = isset($input['keterangan']) ? trim($input['keterangan']) : '';
+        $id_jahit     = isset($input['id_jahit']) ? $input['id_jahit'] : '';
+        $jumlah_hasil = isset($input['jumlah_hasil']) ? $input['jumlah_hasil'] : '';
+        $status       = isset($input['status']) ? trim($input['status']) : '';
+        $tanggal      = isset($input['tanggal']) ? $input['tanggal'] : '';
+        $id_user      = isset($input['id_user']) ? $input['id_user'] : '';
 
-        if (empty($id) || empty($nama_penjahit) || empty($jumlah_jahit) || empty($status)) {
+        if (empty($id_jahit) || empty($jumlah_hasil) || empty($status) || empty($id_user)) {
             echo json_encode([
                 "status"  => "error",
                 "message" => "Data tidak lengkap."
@@ -90,10 +95,10 @@ switch ($method) {
 
         $stmt = mysqli_prepare($koneksi, "
             UPDATE jahit 
-            SET nama_penjahit = ?, jumlah_jahit = ?, jumlah_selesai = ?, status = ?, keterangan = ? 
-            WHERE id = ?
+            SET jumlah_hasil = ?, status = ?, tanggal = ?, id_user = ? 
+            WHERE id_jahit = ?
         ");
-        mysqli_stmt_bind_param($stmt, "siissi", $nama_penjahit, $jumlah_jahit, $jumlah_selesai, $status, $keterangan, $id);
+        mysqli_stmt_bind_param($stmt, "issii", $jumlah_hasil, $status, $tanggal, $id_user, $id_jahit);
 
         if (mysqli_stmt_execute($stmt)) {
             echo json_encode([
@@ -108,12 +113,11 @@ switch ($method) {
         }
         break;
 
-    // Hapus data jahit
     case 'DELETE':
         $input = json_decode(file_get_contents("php://input"), true);
-        $id = isset($input['id']) ? $input['id'] : '';
+        $id_jahit = isset($input['id_jahit']) ? $input['id_jahit'] : '';
 
-        if (empty($id)) {
+        if (empty($id_jahit)) {
             echo json_encode([
                 "status"  => "error",
                 "message" => "ID tidak ditemukan."
@@ -121,8 +125,8 @@ switch ($method) {
             exit;
         }
 
-        $stmt = mysqli_prepare($koneksi, "DELETE FROM jahit WHERE id = ?");
-        mysqli_stmt_bind_param($stmt, "i", $id);
+        $stmt = mysqli_prepare($koneksi, "DELETE FROM jahit WHERE id_jahit = ?");
+        mysqli_stmt_bind_param($stmt, "i", $id_jahit);
 
         if (mysqli_stmt_execute($stmt)) {
             echo json_encode([

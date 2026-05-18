@@ -10,13 +10,13 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 switch ($method) {
 
-    // Ambil semua data pengiriman
     case 'GET':
         $result = mysqli_query($koneksi, "
-            SELECT id, batch_id, nama_penerima, alamat, 
-                   jumlah_kirim, status, tanggal_kirim, keterangan 
-            FROM pengiriman 
-            ORDER BY tanggal_kirim DESC
+            SELECT p.id_pengiriman, p.id_batch, ba.nama_batch,
+                   p.jumlah_kirim, p.tanggal_kirim
+            FROM pengiriman p
+            LEFT JOIN batch ba ON p.id_batch = ba.id_batch
+            ORDER BY p.tanggal_kirim DESC
         ");
 
         $data = [];
@@ -30,27 +30,21 @@ switch ($method) {
         ]);
         break;
 
-    // Tambah data pengiriman
     case 'POST':
         $input = json_decode(file_get_contents("php://input"), true);
 
-        $batch_id      = isset($input['batch_id']) ? $input['batch_id'] : '';
-        $nama_penerima = isset($input['nama_penerima']) ? trim($input['nama_penerima']) : '';
-        $alamat        = isset($input['alamat']) ? trim($input['alamat']) : '';
-        $jumlah_kirim  = isset($input['jumlah_kirim']) ? $input['jumlah_kirim'] : '';
-        $status        = isset($input['status']) ? trim($input['status']) : 'menunggu';
-        $keterangan    = isset($input['keterangan']) ? trim($input['keterangan']) : '';
+        $id_batch     = isset($input['id_batch']) ? $input['id_batch'] : '';
+        $jumlah_kirim = isset($input['jumlah_kirim']) ? $input['jumlah_kirim'] : '';
+        $tanggal_kirim = isset($input['tanggal_kirim']) ? $input['tanggal_kirim'] : date('Y-m-d');
 
-        // Validasi
-        if (empty($batch_id) || empty($nama_penerima) || empty($alamat) || empty($jumlah_kirim)) {
+        if (empty($id_batch) || empty($jumlah_kirim)) {
             echo json_encode([
                 "status"  => "error",
-                "message" => "Batch, nama penerima, alamat, dan jumlah kirim wajib diisi."
+                "message" => "Batch dan jumlah kirim wajib diisi."
             ]);
             exit;
         }
 
-        // Validasi jumlah kirim harus lebih dari 0
         if ($jumlah_kirim <= 0) {
             echo json_encode([
                 "status"  => "error",
@@ -60,10 +54,10 @@ switch ($method) {
         }
 
         $stmt = mysqli_prepare($koneksi, "
-            INSERT INTO pengiriman (batch_id, nama_penerima, alamat, jumlah_kirim, status, keterangan, tanggal_kirim) 
-            VALUES (?, ?, ?, ?, ?, ?, NOW())
+            INSERT INTO pengiriman (id_batch, jumlah_kirim, tanggal_kirim) 
+            VALUES (?, ?, ?)
         ");
-        mysqli_stmt_bind_param($stmt, "ississ", $batch_id, $nama_penerima, $alamat, $jumlah_kirim, $status, $keterangan);
+        mysqli_stmt_bind_param($stmt, "iis", $id_batch, $jumlah_kirim, $tanggal_kirim);
 
         if (mysqli_stmt_execute($stmt)) {
             echo json_encode([
@@ -78,18 +72,14 @@ switch ($method) {
         }
         break;
 
-    // Update data pengiriman
     case 'PUT':
         $input = json_decode(file_get_contents("php://input"), true);
 
-        $id            = isset($input['id']) ? $input['id'] : '';
-        $nama_penerima = isset($input['nama_penerima']) ? trim($input['nama_penerima']) : '';
-        $alamat        = isset($input['alamat']) ? trim($input['alamat']) : '';
+        $id_pengiriman = isset($input['id_pengiriman']) ? $input['id_pengiriman'] : '';
         $jumlah_kirim  = isset($input['jumlah_kirim']) ? $input['jumlah_kirim'] : '';
-        $status        = isset($input['status']) ? trim($input['status']) : '';
-        $keterangan    = isset($input['keterangan']) ? trim($input['keterangan']) : '';
+        $tanggal_kirim = isset($input['tanggal_kirim']) ? $input['tanggal_kirim'] : '';
 
-        if (empty($id) || empty($nama_penerima) || empty($alamat) || empty($jumlah_kirim) || empty($status)) {
+        if (empty($id_pengiriman) || empty($jumlah_kirim)) {
             echo json_encode([
                 "status"  => "error",
                 "message" => "Data tidak lengkap."
@@ -97,22 +87,20 @@ switch ($method) {
             exit;
         }
 
-        // Validasi status pengiriman
-        $allowed_status = ['menunggu', 'dikirim', 'sampai', 'dibatalkan'];
-        if (!in_array($status, $allowed_status)) {
+        if ($jumlah_kirim <= 0) {
             echo json_encode([
                 "status"  => "error",
-                "message" => "Status tidak valid. Pilih: menunggu, dikirim, sampai, atau dibatalkan."
+                "message" => "Jumlah kirim harus lebih dari 0."
             ]);
             exit;
         }
 
         $stmt = mysqli_prepare($koneksi, "
             UPDATE pengiriman 
-            SET nama_penerima = ?, alamat = ?, jumlah_kirim = ?, status = ?, keterangan = ? 
-            WHERE id = ?
+            SET jumlah_kirim = ?, tanggal_kirim = ? 
+            WHERE id_pengiriman = ?
         ");
-        mysqli_stmt_bind_param($stmt, "ssissi", $nama_penerima, $alamat, $jumlah_kirim, $status, $keterangan, $id);
+        mysqli_stmt_bind_param($stmt, "isi", $jumlah_kirim, $tanggal_kirim, $id_pengiriman);
 
         if (mysqli_stmt_execute($stmt)) {
             echo json_encode([
@@ -127,12 +115,11 @@ switch ($method) {
         }
         break;
 
-    // Hapus data pengiriman
     case 'DELETE':
         $input = json_decode(file_get_contents("php://input"), true);
-        $id = isset($input['id']) ? $input['id'] : '';
+        $id_pengiriman = isset($input['id_pengiriman']) ? $input['id_pengiriman'] : '';
 
-        if (empty($id)) {
+        if (empty($id_pengiriman)) {
             echo json_encode([
                 "status"  => "error",
                 "message" => "ID tidak ditemukan."
@@ -140,23 +127,8 @@ switch ($method) {
             exit;
         }
 
-        // Cek status sebelum hapus, tidak boleh hapus yang sudah dikirim
-        $cek = mysqli_prepare($koneksi, "SELECT status FROM pengiriman WHERE id = ?");
-        mysqli_stmt_bind_param($cek, "i", $id);
-        mysqli_stmt_execute($cek);
-        $result = mysqli_stmt_get_result($cek);
-        $row = mysqli_fetch_assoc($result);
-
-        if ($row && $row['status'] === 'dikirim') {
-            echo json_encode([
-                "status"  => "error",
-                "message" => "Data pengiriman yang sudah dikirim tidak bisa dihapus."
-            ]);
-            exit;
-        }
-
-        $stmt = mysqli_prepare($koneksi, "DELETE FROM pengiriman WHERE id = ?");
-        mysqli_stmt_bind_param($stmt, "i", $id);
+        $stmt = mysqli_prepare($koneksi, "DELETE FROM pengiriman WHERE id_pengiriman = ?");
+        mysqli_stmt_bind_param($stmt, "i", $id_pengiriman);
 
         if (mysqli_stmt_execute($stmt)) {
             echo json_encode([

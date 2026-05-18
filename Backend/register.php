@@ -5,16 +5,15 @@ header("Access-Control-Allow-Methods: POST");
 
 include "koneksi.php";
 
-// Ambil data dari React (dikirim dalam format JSON)
 $data = json_decode(file_get_contents("php://input"), true);
 
-$full_name        = isset($data['fullName']) ? trim($data['fullName']) : '';
 $email            = isset($data['email']) ? trim($data['email']) : '';
 $password         = isset($data['password']) ? $data['password'] : '';
 $confirm_password = isset($data['confirmPassword']) ? $data['confirmPassword'] : '';
+$role             = isset($data['role']) ? trim($data['role']) : 'pegawai';
 
 // Validasi input kosong
-if (empty($full_name) || empty($email) || empty($password) || empty($confirm_password)) {
+if (empty($email) || empty($password) || empty($confirm_password)) {
     echo json_encode([
         "status"  => "error",
         "message" => "Semua field wajib diisi."
@@ -49,8 +48,18 @@ if (strlen($password) < 6) {
     exit;
 }
 
+// Validasi role
+$allowed_role = ['admin', 'pegawai', 'owner'];
+if (!in_array($role, $allowed_role)) {
+    echo json_encode([
+        "status"  => "error",
+        "message" => "Role tidak valid."
+    ]);
+    exit;
+}
+
 // Cek apakah email sudah terdaftar
-$cek = mysqli_prepare($koneksi, "SELECT id FROM users WHERE email = ?");
+$cek = mysqli_prepare($koneksi, "SELECT id_user FROM users WHERE Email = ?");
 mysqli_stmt_bind_param($cek, "s", $email);
 mysqli_stmt_execute($cek);
 mysqli_stmt_store_result($cek);
@@ -63,12 +72,12 @@ if (mysqli_stmt_num_rows($cek) > 0) {
     exit;
 }
 
-// Hash password sebelum disimpan
+// Hash password
 $hashed_password = password_hash($password, PASSWORD_DEFAULT);
 
 // Simpan ke database
-$stmt = mysqli_prepare($koneksi, "INSERT INTO users (full_name, email, password, role) VALUES (?, ?, ?, 'user')");
-mysqli_stmt_bind_param($stmt, "sss", $full_name, $email, $hashed_password);
+$stmt = mysqli_prepare($koneksi, "INSERT INTO users (Email, password, role) VALUES (?, ?, ?)");
+mysqli_stmt_bind_param($stmt, "sss", $email, $hashed_password, $role);
 
 if (mysqli_stmt_execute($stmt)) {
     echo json_encode([
