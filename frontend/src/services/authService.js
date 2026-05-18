@@ -1,107 +1,52 @@
-const USERS_KEY = "users";
-const CURRENT_USER_KEY = "currentUser";
+const API_URL = "http://localhost/project-konveksi/Backend";
 
-function hashPassword(value) {
-  // Basic hashing for demo purpose only.
-  let hash = 5381;
-  for (let i = 0; i < value.length; i += 1) {
-    hash = (hash * 33) ^ value.charCodeAt(i);
-  }
-  return `h${(hash >>> 0).toString(16)}`;
-}
+export async function loginUser({ email, password }) {
+  try {
+    const response = await fetch(`${API_URL}/login.php`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
 
-function sanitizeUser(user) {
-  const { password, passwordHash, ...safe } = user;
-  return safe;
-}
+    const data = await response.json();
 
-const DEFAULT_ADMIN = {
-  name: "Admin Konveksi",
-  email: "admin@gmail.com",
-  passwordHash: hashPassword("admin123"),
-  role: "admin",
-};
-
-function readUsers() {
-  const raw = localStorage.getItem(USERS_KEY);
-  const parsed = raw ? JSON.parse(raw) : [];
-  const migrated = parsed.map((u) => {
-    if (u.passwordHash) return u;
-    if (u.password) {
-      const { password, ...rest } = u;
-      return { ...rest, passwordHash: hashPassword(password) };
+    if (data.status === "success") {
+      localStorage.setItem("currentUser", JSON.stringify(data.data));
+      return { ok: true, message: data.message, user: data.data };
+    } else {
+      return { ok: false, message: data.message };
     }
-    return u;
-  });
-
-  const migrationChanged = JSON.stringify(parsed) !== JSON.stringify(migrated);
-  if (migrationChanged) {
-    localStorage.setItem(USERS_KEY, JSON.stringify(migrated));
+  } catch (error) {
+    return { ok: false, message: "Gagal terhubung ke server." };
   }
-
-  const hasAdmin = migrated.some((u) => u.email === DEFAULT_ADMIN.email);
-  const users = hasAdmin ? migrated : [DEFAULT_ADMIN, ...migrated];
-  if (!hasAdmin) localStorage.setItem(USERS_KEY, JSON.stringify(users));
-  console.log("[auth] users in storage:", users);
-  return users;
 }
 
-function writeUsers(users) {
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
-  console.log("[auth] users updated:", users);
-}
+export async function registerUser({ email, password, confirmPassword, role }) {
+  try {
+    const response = await fetch(`${API_URL}/register.php`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password, confirmPassword, role }),
+    });
 
-export function getUsers() {
-  return readUsers();
-}
+    const data = await response.json();
 
-export function registerUser({ name, email, password }) {
-  const users = readUsers();
-  const normalizedEmail = email.toLowerCase();
-  const exists = users.some((u) => u.email.toLowerCase() === normalizedEmail);
-
-  console.log("[auth] register payload:", { name, email, password });
-  if (exists) {
-    return { ok: false, message: "Email sudah terdaftar." };
+    if (data.status === "success") {
+      return { ok: true, message: data.message };
+    } else {
+      return { ok: false, message: data.message };
+    }
+  } catch (error) {
+    return { ok: false, message: "Gagal terhubung ke server." };
   }
-
-  const newUser = {
-    name,
-    email: normalizedEmail,
-    passwordHash: hashPassword(password),
-    role: "user",
-  };
-  writeUsers([...users, newUser]);
-  return {
-    ok: true,
-    message: "Register berhasil.",
-    user: sanitizeUser(newUser),
-  };
-}
-
-export function loginUser({ email, password }) {
-  const users = readUsers();
-  const normalizedEmail = email.toLowerCase();
-  const user = users.find((u) => u.email.toLowerCase() === normalizedEmail);
-  const hashedInput = hashPassword(password);
-
-  console.log("[auth] login payload:", { email, password });
-  if (!user) return { ok: false, message: "Email tidak ditemukan." };
-  if (user.passwordHash !== hashedInput)
-    return { ok: false, message: "Password salah." };
-
-  const safeUser = sanitizeUser(user);
-  localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(safeUser));
-  console.log("[auth] login success:", safeUser);
-  return { ok: true, message: "Login berhasil.", user: safeUser };
 }
 
 export function getCurrentUser() {
-  const raw = localStorage.getItem(CURRENT_USER_KEY);
+  const raw = localStorage.getItem("currentUser");
   if (!raw) return null;
-  return sanitizeUser(JSON.parse(raw));
+  return JSON.parse(raw);
 }
 
 export function logoutUser() {
-  localStorage.removeItem(CURRENT_USER_KEY);
+  localStorage.removeItem("currentUser");
 }
