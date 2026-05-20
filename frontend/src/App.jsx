@@ -5,9 +5,7 @@ import useAuth from "./hooks/useAuth";
 import Dashboard from "./pages/Dashboard";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
-
-// ── Import halaman customer (buat dulu nanti) ──
-// import CustomerPage from "./pages/CustomerPage";
+import CustomerPage from "./pages/CustomerPage"; // ← uncomment ini
 
 function App() {
   const navigate = useNavigate();
@@ -50,11 +48,10 @@ function App() {
     setLoginSuccess(result.message);
     setLoading(false);
 
-    // ── Redirect berdasarkan role ──
     if (result.user.role === "admin") {
       navigate("/dashboard");
     } else if (result.user.role === "customer") {
-      navigate("/customer"); // ← tambah ini
+      navigate("/customer");
     } else if (["bahan", "cutting", "jahit", "finishing", "pengiriman"].includes(result.user.role)) {
       navigate(`/role/${result.user.role}`);
     } else {
@@ -70,7 +67,7 @@ function App() {
     const email = String(form.get("email") || "").trim();
     const password = String(form.get("password") || "");
     const confirmPassword = String(form.get("confirmPassword") || "");
-    const role = String(form.get("role") || "").trim(); // ← ambil role dari form
+    const role = String(form.get("role") || "").trim();
 
     if (!email || !password || !confirmPassword) {
       setRegisterError("Semua field wajib diisi.");
@@ -97,7 +94,7 @@ function App() {
     setRegisterSuccess("");
     setLoading(true);
 
-    const result = await register({ email, password, confirmPassword, role }); // ← kirim role
+    const result = await register({ email, password, confirmPassword, role });
     setLoading(false);
 
     if (!result.ok) {
@@ -153,11 +150,7 @@ function App() {
         path="/customer"
         element={
           <ProtectedRoute isAllowed={Boolean(user) && user?.role === "customer"}>
-            {/* ganti dengan <CustomerPage /> kalau sudah dibuat */}
-            <div style={{padding:"2rem"}}>
-              <h1>Halaman Customer — Coming Soon</h1>
-              <button onClick={handleLogout}>Logout</button>
-            </div>
+            <CustomerPage user={user} onLogout={handleLogout} /> // ← sudah diganti
           </ProtectedRoute>
         }
       />
