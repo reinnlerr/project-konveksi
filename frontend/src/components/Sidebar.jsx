@@ -2,7 +2,7 @@ import { CheckCircle2, LayoutGrid, PackagePlus, Scissors, Send, Shirt, Inbox } f
 
 const iconMap = {
   Dashboard: LayoutGrid,
-  "Pesanan Masuk": Inbox, // INI TAMBAHANNYA BIAR GAK ERROR
+  "Pesanan Masuk": Inbox,
   "Bahan Masuk": PackagePlus,
   Cutting: Scissors,
   Jahit: Shirt,
@@ -10,24 +10,8 @@ const iconMap = {
   Pengiriman: Send
 };
 
-export default function Sidebar({ navItems, activePage, onChange }) {
-  return (
-    <aside className="w-full bg-slate-900 p-4 md:w-72 md:p-6">
-      <div className="mb-6 rounded-2xl border border-white/10 bg-slate-800 p-4 text-slate-100">
-        <p className="text-xs uppercase tracking-wider text-slate-400">Sistem Produksi</p>
-        <h2 className="mt-1 text-lg font-semibold">Konveksi Dashboard</h2>
-      </div>
-      <nav className="grid gap-2">
-        {navItems.map((item) => (
-          <SidebarButton key={item} item={item} active={activePage === item} onClick={() => onChange(item)} />
-        ))}
-      </nav>
-    </aside>
-  );
-}
-
+// PINDAH KE ATAS: Biar React kenal duluan sebelum dipakai
 function SidebarButton({ item, active, onClick }) {
-  // Kalau misal ada typo nama menu, otomatis dikasih icon Inbox biar ga crash lagi
   const Icon = iconMap[item] || Inbox; 
 
   return (
@@ -50,5 +34,22 @@ function SidebarButton({ item, active, onClick }) {
       </span>
       <span>{item}</span>
     </button>
+  );
+}
+
+// KOMPONEN UTAMA DI BAWAH
+export default function Sidebar({ navItems, activePage, onChange }) {
+  return (
+    <aside className="w-full bg-slate-900 p-4 md:w-72 md:p-6">
+      <div className="mb-6 rounded-2xl border border-white/10 bg-slate-800 p-4 text-slate-100">
+        <p className="text-xs uppercase tracking-wider text-slate-400">Sistem Produksi</p>
+        <h2 className="mt-1 text-lg font-semibold">Konveksi Dashboard</h2>
+      </div>
+      <nav className="grid gap-2">
+        {navItems.map((item) => (
+          <SidebarButton key={item} item={item} active={activePage === item} onClick={() => onChange(item)} />
+        ))}
+      </nav>
+    </aside>
   );
 }
