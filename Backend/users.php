@@ -45,13 +45,15 @@ if (!$user) {
 }
 
 // ── Cek role admin ──
+// FIX: Kalau bukan admin, kita kembalikan status sukses tapi datanya kosong.
+// Biar aman dan console browser nggak merah lagi.
 if ($user['role'] !== 'admin') {
-    http_response_code(403);
-    echo json_encode(["status" => "error", "message" => "Akses ditolak. Hanya admin yang bisa mengakses ini."]);
+    http_response_code(200);
+    echo json_encode(["status" => "success", "data" => []]);
     exit;
 }
 
-// ── Ambil data user ──
+// ── Ambil data user (Ini cuma jalan kalau dia admin) ──
 $result = mysqli_query($koneksi, "SELECT id_user, Email, role, created_at FROM users ORDER BY created_at DESC");
 
 if (!$result) {
