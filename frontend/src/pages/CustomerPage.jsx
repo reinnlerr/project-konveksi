@@ -40,7 +40,7 @@ export default function CustomerPage({ user, onLogout }) {
 
   const fetchOrders = async () => {
     try {
-      const res  = await fetch(`${API_URL}/order.php`, {
+      const res  = await fetch(`${API_URL}/orders.php`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -62,9 +62,10 @@ export default function CustomerPage({ user, onLogout }) {
       return;
     }
 
-    setLoading(true);
+    loading(true);
     try {
-      const res  = await fetch(`${API_URL}/order.php`, {
+      // Selesai diperbaiki: di bawah ini sudah diganti menjadi orders.php
+      const res  = await fetch(`${API_URL}/orders.php`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
