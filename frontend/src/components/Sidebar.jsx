@@ -1,7 +1,8 @@
-import { CheckCircle2, LayoutGrid, PackagePlus, Scissors, Send, Shirt } from "lucide-react";
+import { CheckCircle2, LayoutGrid, PackagePlus, Scissors, Send, Shirt, Inbox } from "lucide-react";
 
 const iconMap = {
   Dashboard: LayoutGrid,
+  "Pesanan Masuk": Inbox, // INI TAMBAHANNYA BIAR GAK ERROR
   "Bahan Masuk": PackagePlus,
   Cutting: Scissors,
   Jahit: Shirt,
@@ -26,7 +27,8 @@ export default function Sidebar({ navItems, activePage, onChange }) {
 }
 
 function SidebarButton({ item, active, onClick }) {
-  const Icon = iconMap[item];
+  // Kalau misal ada typo nama menu, otomatis dikasih icon Inbox biar ga crash lagi
+  const Icon = iconMap[item] || Inbox; 
 
   return (
     <button
