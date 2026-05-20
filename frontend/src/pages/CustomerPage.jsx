@@ -62,9 +62,10 @@ export default function CustomerPage({ user, onLogout }) {
       return;
     }
 
-    loading(true);
+    // INI YANG TADI ERROR, UDAH DIGANTI JADI setLoading(true);
+    setLoading(true);
+    
     try {
-      // Selesai diperbaiki: di bawah ini sudah diganti menjadi orders.php
       const res  = await fetch(`${API_URL}/orders.php`, {
         method: "POST",
         headers: {
