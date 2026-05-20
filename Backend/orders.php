@@ -60,13 +60,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
-// ── GET: ambil order milik customer ──
+// ── GET: ambil order ──
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-    $id_user = $user['id_user'];
+    // Cek apakah yang login adalah admin
+    if (isset($user['role']) && $user['role'] === 'admin') {
+        // Jika Admin: Ambil SEMUA orderan dari semua customer
+        $stmt = mysqli_prepare($koneksi, "SELECT * FROM orders ORDER BY created_at DESC");
+        mysqli_stmt_execute($stmt);
+    } else {
+        // Jika Customer: Cuma ambil orderan miliknya sendiri
+        $id_user = $user['id_user'];
+        $stmt = mysqli_prepare($koneksi, "SELECT * FROM orders WHERE id_user = ? ORDER BY created_at DESC");
+        mysqli_stmt_bind_param($stmt, "i", $id_user);
+        mysqli_stmt_execute($stmt);
+    }
 
-    $stmt = mysqli_prepare($koneksi, "SELECT * FROM orders WHERE id_user = ? ORDER BY created_at DESC");
-    mysqli_stmt_bind_param($stmt, "i", $id_user);
-    mysqli_stmt_execute($stmt);
     $result = mysqli_stmt_get_result($stmt);
 
     $data = [];
