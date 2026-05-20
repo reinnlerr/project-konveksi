@@ -11,6 +11,24 @@ $method = $_SERVER['REQUEST_METHOD'];
 switch ($method) {
 
     case 'GET':
+        // ── FITUR BARU: Jika React minta data untuk dropdown Pilih Batch ──
+        if (isset($_GET['get_batches'])) {
+            // Ambil id_batch dan nama_batch dari tabel batch
+            $result = mysqli_query($koneksi, "SELECT id_batch, nama_batch FROM batch ORDER BY id_batch DESC");
+            
+            $batches = [];
+            while ($row = mysqli_fetch_assoc($result)) {
+                $batches[] = $row;
+            }
+
+            echo json_encode([
+                "status" => "success",
+                "data"   => $batches
+            ]);
+            break; // Stop di sini, gak usah lanjut ke bawah
+        }
+
+        // ── DEFAULT: Ambil semua data bahan masuk untuk tabel/list ──
         $result = mysqli_query($koneksi, "
             SELECT b.id_bahan, b.id_batch, ba.nama_batch, 
                    b.nama_bahan, b.jumlah, b.tanggal 
