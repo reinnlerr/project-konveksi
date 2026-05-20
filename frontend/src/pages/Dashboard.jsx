@@ -9,9 +9,11 @@ import DashboardPage from "./DashboardPage";
 import Finishing from "./Finishing";
 import Jahit from "./Jahit";
 import Pengiriman from "./Pengiriman";
+import PesananMasuk from "./PesananMasuk"; // INI YANG BIKIN STUCK, UDAH DITAMBAHIN
 
 const pageTitles = {
   Dashboard: "Ringkasan Produksi",
+  "Pesanan Masuk": "Daftar Pesanan Customer",
   "Bahan Masuk": "Input Bahan Masuk",
   Cutting: "Input Hasil Cutting",
   Jahit: "Input Hasil Jahit",
@@ -20,7 +22,7 @@ const pageTitles = {
 };
 
 const navByRole = {
-  admin: ["Dashboard", "Bahan Masuk", "Cutting", "Jahit", "Finishing", "Pengiriman"],
+  admin: ["Dashboard", "Pesanan Masuk", "Bahan Masuk", "Cutting", "Jahit", "Finishing", "Pengiriman"],
   bahan: ["Dashboard", "Bahan Masuk"],
   cutting: ["Dashboard", "Cutting"],
   jahit: ["Dashboard", "Jahit"],
@@ -54,6 +56,7 @@ export default function Dashboard({ user, initialPage = "Dashboard", onLogout, d
 
   const content = useMemo(() => {
     if (activePage === "Dashboard") return <DashboardPage stats={stats} />;
+    if (activePage === "Pesanan Masuk") return <PesananMasuk />;
     if (activePage === "Bahan Masuk") {
       return <BahanMasuk batchOptions={batchOptions} canEdit={canEditModule("bahan")} onSubmit={onSubmitForm} />;
     }
