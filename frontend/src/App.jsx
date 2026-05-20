@@ -5,7 +5,6 @@ import useAuth from "./hooks/useAuth";
 import Dashboard from "./pages/Dashboard";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
-import RoleSelectionPage from "./pages/RoleSelectionPage";
 
 function App() {
   const navigate = useNavigate();
@@ -41,15 +40,24 @@ function App() {
       return;
     }
 
+    // ── Simpan token ke localStorage ──
+    if (result.token) {
+      localStorage.setItem("token", result.token);
+    }
+
     setLoginSuccess(result.message);
     setLoading(false);
 
+    // ── Redirect berdasarkan role yang valid saja ──
     if (result.user.role === "admin") {
       navigate("/dashboard");
     } else if (["bahan", "cutting", "jahit", "finishing", "pengiriman"].includes(result.user.role)) {
       navigate(`/role/${result.user.role}`);
     } else {
-      navigate("/select-role");
+      // Role tidak dikenali → tolak akses
+      setLoginError("Role tidak valid. Hubungi administrator.");
+      setLoginSuccess("");
+      logout();
     }
   };
 
@@ -94,11 +102,8 @@ function App() {
     navigate("/login");
   };
 
-  const selectRole = (role) => {
-    navigate(`/role/${role.toLowerCase()}`);
-  };
-
   const handleLogout = () => {
+    localStorage.removeItem("token"); // ── Hapus token saat logout ──
     logout();
     setLoginError("");
     setRegisterError("");
@@ -133,18 +138,12 @@ function App() {
           </ProtectedRoute>
         }
       />
-      <Route
-        path="/select-role"
-        element={
-          <ProtectedRoute isAllowed={Boolean(user) && user?.role !== "admin"}>
-            <RoleSelectionPage onSelectRole={selectRole} />
-          </ProtectedRoute>
-        }
-      />
+
+      {/* Route per role — tanpa select-role bebas */}
       <Route
         path="/role/bahan"
         element={
-          <ProtectedRoute isAllowed={Boolean(user)}>
+          <ProtectedRoute isAllowed={Boolean(user) && user?.role === "bahan"}>
             <Dashboard user={user} dashboardRole="bahan" initialPage="Dashboard" onLogout={handleLogout} />
           </ProtectedRoute>
         }
@@ -152,7 +151,7 @@ function App() {
       <Route
         path="/role/cutting"
         element={
-          <ProtectedRoute isAllowed={Boolean(user)}>
+          <ProtectedRoute isAllowed={Boolean(user) && user?.role === "cutting"}>
             <Dashboard user={user} dashboardRole="cutting" initialPage="Dashboard" onLogout={handleLogout} />
           </ProtectedRoute>
         }
@@ -160,7 +159,7 @@ function App() {
       <Route
         path="/role/jahit"
         element={
-          <ProtectedRoute isAllowed={Boolean(user)}>
+          <ProtectedRoute isAllowed={Boolean(user) && user?.role === "jahit"}>
             <Dashboard user={user} dashboardRole="jahit" initialPage="Dashboard" onLogout={handleLogout} />
           </ProtectedRoute>
         }
@@ -168,7 +167,7 @@ function App() {
       <Route
         path="/role/finishing"
         element={
-          <ProtectedRoute isAllowed={Boolean(user)}>
+          <ProtectedRoute isAllowed={Boolean(user) && user?.role === "finishing"}>
             <Dashboard user={user} dashboardRole="finishing" initialPage="Dashboard" onLogout={handleLogout} />
           </ProtectedRoute>
         }
@@ -176,11 +175,14 @@ function App() {
       <Route
         path="/role/pengiriman"
         element={
-          <ProtectedRoute isAllowed={Boolean(user)}>
+          <ProtectedRoute isAllowed={Boolean(user) && user?.role === "pengiriman"}>
             <Dashboard user={user} dashboardRole="pengiriman" initialPage="Dashboard" onLogout={handleLogout} />
           </ProtectedRoute>
         }
       />
+
+      {/* Catch-all → redirect ke login */}
+      <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );
 }

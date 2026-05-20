@@ -11,15 +11,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 include "koneksi.php";
 
-$result = mysqli_query($koneksi, "SELECT id_user, Email, role, created_at FROM users");
+// ── Fungsi verifikasi token ──
+function verifyToken($auth) {
+    if (empty($auth) || !str_starts_with($auth, 'Bearer ')) return null;
+
+    $token  = str_replace('Bearer ', '', $auth);
+    $parts  = explode('.', $token);
+    if (count($parts) !== 2) return null;
+
+    [$payload, $signature] = $parts;
+
+    // Verifikasi signature
+    $expected = hash_hmac('sha256', $payload, 'SECRET_KEY_KONVEKSI_UAS');
+    if (!hash_equals($expected, $signature)) return null;
+
+    $decoded = json_decode(base64_decode($payload), true);
+
+    // Cek expiry
+    if (!$decoded || time() > $decoded['exp']) return null;
+
+    return $decoded;
+}
+
+// ── Cek token ──
+$headers = getallheaders();
+$auth    = isset($headers['Authorization']) ? $headers['Authorization'] : '';
+$user    = verifyToken($auth);
+
+if (!$user) {
+    http_response_code(401);
+    echo json_encode(["status" => "error", "message" => "Token tidak valid. Silakan login ulang."]);
+    exit;
+}
+
+// ── Cek role admin ──
+if ($user['role'] !== 'admin') {
+    http_response_code(403);
+    echo json_encode(["status" => "error", "message" => "Akses ditolak. Hanya admin yang bisa mengakses ini."]);
+    exit;
+}
+
+// ── Ambil data user ──
+$result = mysqli_query($koneksi, "SELECT id_user, Email, role, created_at FROM users ORDER BY created_at DESC");
+
+if (!$result) {
+    http_response_code(500);
+    echo json_encode(["status" => "error", "message" => "Gagal mengambil data."]);
+    exit;
+}
 
 $data = [];
 while ($row = mysqli_fetch_assoc($result)) {
     $data[] = $row;
 }
 
-echo json_encode([
-    "status" => "success",
-    "data"   => $data
-]);
+echo json_encode(["status" => "success", "data" => $data]);
 ?>

@@ -11,8 +11,10 @@ export async function loginUser({ email, password }) {
     const data = await response.json();
 
     if (data.status === "success") {
+      // ── Simpan user & token ──
       localStorage.setItem("currentUser", JSON.stringify(data.data));
-      return { ok: true, message: data.message, user: data.data };
+      localStorage.setItem("token", data.token); // ← tambah ini
+      return { ok: true, message: data.message, user: data.data, token: data.token }; // ← return token
     } else {
       return { ok: false, message: data.message };
     }
@@ -49,14 +51,18 @@ export function getCurrentUser() {
 
 export function logoutUser() {
   localStorage.removeItem("currentUser");
+  localStorage.removeItem("token"); // ← hapus token juga saat logout
 }
 
-// Tambahan ini aja yang baru! ⬇️
 export async function getUsers() {
   try {
+    const token = localStorage.getItem("token"); // ← ambil token
     const response = await fetch(`${API_URL}/users.php`, {
       method: "GET",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}` // ← kirim token
+      },
     });
     const data = await response.json();
     if (data.status === "success") {

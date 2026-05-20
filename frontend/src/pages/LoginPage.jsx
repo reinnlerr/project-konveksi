@@ -30,24 +30,18 @@ export default function LoginPage({ onLogin, loading, error, success }) {
             />
             Remember me
           </label>
-          <button
-            type="button"
-            className="font-medium text-pink-500 transition hover:underline"
-          >
-            Forgot password
-          </button>
         </div>
 
-        {error ? (
+        {error && (
           <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
             {error}
           </p>
-        ) : null}
-        {success ? (
+        )}
+        {success && (
           <p className="rounded-xl border border-pink-200 bg-pink-50 px-3 py-2 text-sm text-pink-600">
             {success}
           </p>
-        ) : null}
+        )}
 
         <button
           disabled={loading}
@@ -57,7 +51,7 @@ export default function LoginPage({ onLogin, loading, error, success }) {
         </button>
       </form>
 
-      <p>
+      <p className="text-sm text-slate-500">
         Belum punya akun?{" "}
         <Link
           to="/register"
