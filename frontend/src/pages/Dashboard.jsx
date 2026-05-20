@@ -9,7 +9,7 @@ import DashboardPage from "./DashboardPage";
 import Finishing from "./Finishing";
 import Jahit from "./Jahit";
 import Pengiriman from "./Pengiriman";
-import PesananMasuk from "./PesananMasuk"; // INI YANG BIKIN STUCK, UDAH DITAMBAHIN
+import PesananMasuk from "./PesananMasuk";
 
 const pageTitles = {
   Dashboard: "Ringkasan Produksi",
@@ -35,10 +35,15 @@ export default function Dashboard({ user, initialPage = "Dashboard", onLogout, d
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState("");
 
+  // currentRole dipakai untuk nentuin menu Sidebar (karena dashboardRole dikirim dari App.jsx)
   const currentRole = dashboardRole || user?.role || "cutting";
-  const effectiveRole = user?.role === "user" ? currentRole : user?.role;
   const currentNav = navByRole[currentRole] || ["Dashboard"];
-  const canEditModule = (moduleRole) => effectiveRole === "admin" || effectiveRole === moduleRole;
+
+  // 👇 INI YANG KITA PERBAIKI 👇
+  // Sekarang Karyawan dan Admin bebas ngedit di modul yang mereka buka
+  const canEditModule = (moduleRole) => {
+    return user?.role === "admin" || user?.role === "karyawan" || user?.role === moduleRole;
+  };
 
   const showToast = (message) => {
     setToast(message);
@@ -70,9 +75,7 @@ export default function Dashboard({ user, initialPage = "Dashboard", onLogout, d
       return <Finishing batchOptions={batchOptions} canEdit={canEditModule("finishing")} onSubmit={onSubmitForm} />;
     }
     if (activePage === "Pengiriman") {
-      return (
-        <Pengiriman batchOptions={batchOptions} canEdit={canEditModule("pengiriman")} onSubmit={onSubmitForm} />
-      );
+      return <Pengiriman batchOptions={batchOptions} canEdit={canEditModule("pengiriman")} onSubmit={onSubmitForm} />;
     }
     return <DashboardPage stats={stats} />;
   }, [activePage, user]);

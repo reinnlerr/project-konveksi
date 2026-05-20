@@ -43,7 +43,9 @@ if (strlen($password) < 6) {
 }
 
 // ── Validasi role yang diizinkan ──
-$allowed_roles = ['admin', 'customer', 'bahan', 'cutting', 'jahit', 'finishing', 'pengiriman'];
+// 👇 UPDATE: Tambahin 'karyawan' di dalam array ini 👇
+$allowed_roles = ['admin', 'customer', 'karyawan', 'bahan', 'cutting', 'jahit', 'finishing', 'pengiriman'];
+
 if (empty($role) || !in_array($role, $allowed_roles)) {
     echo json_encode(["status" => "error", "message" => "Role tidak valid. Silakan pilih role yang tersedia."]);
     exit;
