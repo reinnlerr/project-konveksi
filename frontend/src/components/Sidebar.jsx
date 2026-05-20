@@ -1,4 +1,4 @@
-import { CheckCircle2, LayoutGrid, PackagePlus, Scissors, Send, Shirt, Inbox } from "lucide-react";
+import { CheckCircle2, Inbox, LayoutGrid, PackagePlus, Scissors, Send, Shirt } from "lucide-react";
 
 const iconMap = {
   Dashboard: LayoutGrid,
@@ -10,8 +10,8 @@ const iconMap = {
   Pengiriman: Send
 };
 
-// PINDAH KE ATAS: Biar React kenal duluan sebelum dipakai
-function SidebarButton({ item, active, onClick }) {
+// Pakai arrow function biar aman dari error inisialisasi React Vite
+const SidebarButton = ({ item, active, onClick }) => {
   const Icon = iconMap[item] || Inbox; 
 
   return (
@@ -35,9 +35,8 @@ function SidebarButton({ item, active, onClick }) {
       <span>{item}</span>
     </button>
   );
-}
+};
 
-// KOMPONEN UTAMA DI BAWAH
 export default function Sidebar({ navItems, activePage, onChange }) {
   return (
     <aside className="w-full bg-slate-900 p-4 md:w-72 md:p-6">
