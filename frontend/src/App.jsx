@@ -6,6 +6,9 @@ import Dashboard from "./pages/Dashboard";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 
+// ── Import halaman customer (buat dulu nanti) ──
+// import CustomerPage from "./pages/CustomerPage";
+
 function App() {
   const navigate = useNavigate();
   const { user, login, register, logout } = useAuth();
@@ -40,7 +43,6 @@ function App() {
       return;
     }
 
-    // ── Simpan token ke localStorage ──
     if (result.token) {
       localStorage.setItem("token", result.token);
     }
@@ -48,13 +50,14 @@ function App() {
     setLoginSuccess(result.message);
     setLoading(false);
 
-    // ── Redirect berdasarkan role yang valid saja ──
+    // ── Redirect berdasarkan role ──
     if (result.user.role === "admin") {
       navigate("/dashboard");
+    } else if (result.user.role === "customer") {
+      navigate("/customer"); // ← tambah ini
     } else if (["bahan", "cutting", "jahit", "finishing", "pengiriman"].includes(result.user.role)) {
       navigate(`/role/${result.user.role}`);
     } else {
-      // Role tidak dikenali → tolak akses
       setLoginError("Role tidak valid. Hubungi administrator.");
       setLoginSuccess("");
       logout();
@@ -67,9 +70,15 @@ function App() {
     const email = String(form.get("email") || "").trim();
     const password = String(form.get("password") || "");
     const confirmPassword = String(form.get("confirmPassword") || "");
+    const role = String(form.get("role") || "").trim(); // ← ambil role dari form
 
     if (!email || !password || !confirmPassword) {
       setRegisterError("Semua field wajib diisi.");
+      setRegisterSuccess("");
+      return;
+    }
+    if (!role) {
+      setRegisterError("Pilih role terlebih dahulu.");
       setRegisterSuccess("");
       return;
     }
@@ -88,7 +97,7 @@ function App() {
     setRegisterSuccess("");
     setLoading(true);
 
-    const result = await register({ email, password, confirmPassword });
+    const result = await register({ email, password, confirmPassword, role }); // ← kirim role
     setLoading(false);
 
     if (!result.ok) {
@@ -103,7 +112,7 @@ function App() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("token"); // ── Hapus token saat logout ──
+    localStorage.removeItem("token");
     logout();
     setLoginError("");
     setRegisterError("");
@@ -139,7 +148,21 @@ function App() {
         }
       />
 
-      {/* Route per role — tanpa select-role bebas */}
+      {/* Route customer */}
+      <Route
+        path="/customer"
+        element={
+          <ProtectedRoute isAllowed={Boolean(user) && user?.role === "customer"}>
+            {/* ganti dengan <CustomerPage /> kalau sudah dibuat */}
+            <div style={{padding:"2rem"}}>
+              <h1>Halaman Customer — Coming Soon</h1>
+              <button onClick={handleLogout}>Logout</button>
+            </div>
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Route per role karyawan */}
       <Route
         path="/role/bahan"
         element={
@@ -181,7 +204,6 @@ function App() {
         }
       />
 
-      {/* Catch-all → redirect ke login */}
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );
