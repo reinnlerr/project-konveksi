@@ -62,13 +62,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // ── GET: ambil order ──
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-    // Cek apakah yang login adalah admin
     if (isset($user['role']) && $user['role'] === 'admin') {
-        // Jika Admin: Ambil SEMUA orderan dari semua customer
         $stmt = mysqli_prepare($koneksi, "SELECT * FROM orders ORDER BY created_at DESC");
         mysqli_stmt_execute($stmt);
     } else {
-        // Jika Customer: Cuma ambil orderan miliknya sendiri
         $id_user = $user['id_user'];
         $stmt = mysqli_prepare($koneksi, "SELECT * FROM orders WHERE id_user = ? ORDER BY created_at DESC");
         mysqli_stmt_bind_param($stmt, "i", $id_user);
@@ -76,13 +73,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     }
 
     $result = mysqli_stmt_get_result($stmt);
-
     $data = [];
     while ($row = mysqli_fetch_assoc($result)) {
         $data[] = $row;
     }
 
     echo json_encode(["status" => "success", "data" => $data]);
+    exit;
+}
+
+// ── PUT: update status order berdasarkan id_batch ──
+if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
+    $data       = json_decode(file_get_contents("php://input"), true);
+    $id_batch   = isset($data['id_batch']) ? (int)$data['id_batch'] : 0;
+    $new_status = isset($data['new_status']) ? trim($data['new_status']) : '';
+
+    $allowed = ['bahan','cutting','jahit','finishing','pengiriman','selesai'];
+    if (!$id_batch || !in_array($new_status, $allowed)) {
+        echo json_encode(["status" => "error", "message" => "Data tidak valid."]);
+        exit;
+    }
+
+    // ── Simpel, langsung pakai id_batch ──
+    $stmt = mysqli_prepare($koneksi, "
+        UPDATE orders SET status = ? 
+        WHERE id_batch = ? AND status != 'selesai'
+    ");
+    mysqli_stmt_bind_param($stmt, "si", $new_status, $id_batch);
+
+    if (mysqli_stmt_execute($stmt)) {
+        echo json_encode(["status" => "success", "message" => "Status order diupdate."]);
+    } else {
+        echo json_encode(["status" => "error", "message" => "Gagal update status."]);
+    }
     exit;
 }
 ?>

@@ -1,123 +1,230 @@
-<?php
-header("Access-Control-Allow-Origin: *");
-header("Content-Type: application/json; charset=UTF-8");
-header("Access-Control-Allow-Methods: GET");
+import { useEffect, useMemo, useState } from "react";
+import PageHeader from "../components/PageHeader";
+import Sidebar from "../components/Sidebar";
+import { LoadingOverlay, Toast } from "../components/ui";
+import { stats } from "../data/mockData";
+import BahanMasuk from "./BahanMasuk";
+import Cutting from "./Cutting";
+import DashboardPage from "./DashboardPage";
+import Finishing from "./Finishing";
+import Jahit from "./Jahit";
+import Pengiriman from "./Pengiriman";
+import PesananMasuk from "./PesananMasuk";
 
-include "koneksi.php";
+const API_URL = "http://localhost/project-konveksi/Backend";
 
-// Total batch
-$total_batch = mysqli_fetch_assoc(mysqli_query($koneksi, "
-    SELECT COUNT(*) as total FROM batch
-"));
+const pageTitles = {
+  Dashboard: "Ringkasan Produksi",
+  "Pesanan Masuk": "Daftar Pesanan Customer",
+  "Bahan Masuk": "Input Bahan Masuk",
+  Cutting: "Input Hasil Cutting",
+  Jahit: "Input Hasil Jahit",
+  Finishing: "Input Hasil Finishing",
+  Pengiriman: "Input Data Pengiriman"
+};
 
-// Batch aktif (status = proses)
-$batch_aktif = mysqli_fetch_assoc(mysqli_query($koneksi, "
-    SELECT COUNT(*) as total FROM batch WHERE status = 'proses'
-"));
+const navByRole = {
+  admin: ["Dashboard", "Pesanan Masuk", "Bahan Masuk", "Cutting", "Jahit", "Finishing", "Pengiriman"],
+  bahan: ["Dashboard", "Bahan Masuk"],
+  cutting: ["Dashboard", "Cutting"],
+  jahit: ["Dashboard", "Jahit"],
+  finishing: ["Dashboard", "Finishing"],
+  pengiriman: ["Dashboard", "Pengiriman"]
+};
 
-// Batch selesai (status = selesai)
-$batch_selesai = mysqli_fetch_assoc(mysqli_query($koneksi, "
-    SELECT COUNT(*) as total FROM batch WHERE status = 'selesai'
-"));
+// Map halaman → endpoint backend
+const endpointMap = {
+  "Bahan Masuk": "bahan_masuk.php",
+  "Cutting":     "cutting.php",
+  "Jahit":       "jahit.php",
+  "Finishing":   "finishing.php",
+  "Pengiriman":  "pengiriman.php",
+};
 
-// Chart produksi mingguan (dari tabel cutting sebagai acuan produksi)
-$chart = mysqli_query($koneksi, "
-    SELECT 
-        DAYNAME(tanggal) as hari,
-        COUNT(*) as total
-    FROM cutting
-    WHERE tanggal >= DATE_SUB(NOW(), INTERVAL 7 DAY)
-    GROUP BY DAYNAME(tanggal), tanggal
-    ORDER BY tanggal ASC
-");
-$chart_data = [];
-while ($row = mysqli_fetch_assoc($chart)) {
-    $chart_data[] = $row;
+// Map halaman → status order yang diupdate
+const statusMap = {
+  "Bahan Masuk": "bahan",
+  "Cutting":     "cutting",
+  "Jahit":       "jahit",
+  "Finishing":   "finishing",
+  "Pengiriman":  "pengiriman",
+};
+
+export default function Dashboard({ user, initialPage = "Dashboard", onLogout, dashboardRole }) {
+  const [activePage, setActivePage]     = useState(initialPage);
+  const [loading, setLoading]           = useState(false);
+  const [toast, setToast]               = useState("");
+  const [toastType, setToastType]       = useState("success");
+  const [batchOptions, setBatchOptions] = useState([]);
+
+  const currentRole = dashboardRole || user?.role || "cutting";
+  const currentNav  = navByRole[currentRole] || ["Dashboard"];
+  const token       = localStorage.getItem("token");
+
+  // ── Fetch batch options dari API ──
+  useEffect(() => {
+    const fetchBatches = async () => {
+      try {
+        const res  = await fetch(`${API_URL}/bahan_masuk.php?get_batches=true`);
+        const data = await res.json();
+        if (data.status === "success") {
+          const formatted = data.data.map((item) => ({
+            value: item.id_batch,
+            label: item.nama_batch,
+          }));
+          setBatchOptions(formatted);
+        }
+      } catch (err) {
+        console.error("Gagal fetch batch:", err);
+      }
+    };
+    fetchBatches();
+  }, []);
+
+  const canEditModule = (moduleRole) => {
+    return user?.role === "admin" || user?.role === moduleRole;
+  };
+
+  const showToast = (message, type = "success") => {
+    setToast(message);
+    setToastType(type);
+    window.setTimeout(() => setToast(""), 2200);
+  };
+
+  // ── onSubmitForm yang beneran POST ke backend ──
+  const onSubmitForm = async (e, successMessage) => {
+    e.preventDefault();
+    setLoading(true);
+
+    const form     = new FormData(e.currentTarget);
+    const endpoint = endpointMap[activePage];
+    const newStatus = statusMap[activePage];
+
+    if (!endpoint) {
+      setLoading(false);
+      return;
+    }
+
+    // Susun payload sesuai halaman
+    let payload = {};
+
+    if (activePage === "Bahan Masuk") {
+      payload = {
+        id_batch:   form.get("id_batch"),
+        nama_bahan: form.get("nama_bahan"),
+        jumlah:     form.get("jumlah"),
+        tanggal:    form.get("tanggal"),
+      };
+    } else if (activePage === "Cutting") {
+      payload = {
+        id_batch:     form.get("batch"),
+        jumlah_hasil: form.get("hasil"),
+        id_user:      user?.id_user,
+        tanggal:      new Date().toISOString().split("T")[0],
+      };
+    } else if (activePage === "Jahit") {
+      payload = {
+        id_batch:     form.get("batch"),
+        jumlah_hasil: form.get("hasil"),
+        id_user:      user?.id_user,
+        tanggal:      new Date().toISOString().split("T")[0],
+      };
+    } else if (activePage === "Finishing") {
+      payload = {
+        id_batch:     form.get("batch"),
+        jumlah_hasil: form.get("hasil"),
+        status:       form.get("status"),
+        id_user:      user?.id_user,
+        tanggal:      new Date().toISOString().split("T")[0],
+      };
+    } else if (activePage === "Pengiriman") {
+      payload = {
+        id_batch: form.get("batch"),
+        jumlah:   form.get("jumlah"),
+        tanggal:  form.get("tanggal"),
+        id_user:  user?.id_user,
+      };
+    }
+
+    try {
+      // 1. Simpan data ke tabel produksi
+      const res  = await fetch(`${API_URL}/${endpoint}`, {
+        method:  "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+
+      if (data.status === "success") {
+        // 2. Update status order berdasarkan id_batch
+        if (newStatus && payload.id_batch) {
+          await fetch(`${API_URL}/order.php`, {
+            method:  "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              id_batch:   payload.id_batch,
+              new_status: newStatus,
+            }),
+          });
+        }
+        showToast(successMessage, "success");
+        // Refresh batch list
+        const batchRes  = await fetch(`${API_URL}/bahan_masuk.php?get_batches=true`);
+        const batchData = await batchRes.json();
+        if (batchData.status === "success") {
+          setBatchOptions(batchData.data.map((item) => ({
+            value: item.id_batch,
+            label: item.nama_batch,
+          })));
+        }
+      } else {
+        showToast(data.message || "Gagal menyimpan data.", "error");
+      }
+    } catch (err) {
+      showToast("Gagal terhubung ke server.", "error");
+    }
+
+    setLoading(false);
+  };
+
+  const content = useMemo(() => {
+    if (activePage === "Dashboard")      return <DashboardPage stats={stats} />;
+    if (activePage === "Pesanan Masuk")  return <PesananMasuk />;
+    if (activePage === "Bahan Masuk") {
+      return <BahanMasuk batchOptions={batchOptions} canEdit={canEditModule("bahan")} onSubmit={onSubmitForm} />;
+    }
+    if (activePage === "Cutting") {
+      return <Cutting batchOptions={batchOptions} canEdit={canEditModule("cutting")} onSubmit={onSubmitForm} />;
+    }
+    if (activePage === "Jahit") {
+      return <Jahit batchOptions={batchOptions} canEdit={canEditModule("jahit")} onSubmit={onSubmitForm} />;
+    }
+    if (activePage === "Finishing") {
+      return <Finishing batchOptions={batchOptions} canEdit={canEditModule("finishing")} onSubmit={onSubmitForm} />;
+    }
+    if (activePage === "Pengiriman") {
+      return <Pengiriman batchOptions={batchOptions} canEdit={canEditModule("pengiriman")} onSubmit={onSubmitForm} />;
+    }
+    return <DashboardPage stats={stats} />;
+  }, [activePage, user, batchOptions]);
+
+  return (
+    <div className="min-h-screen bg-slate-100 md:flex">
+      <Sidebar navItems={currentNav} activePage={activePage} onChange={setActivePage} />
+      <main className="flex-1 p-4 md:p-8">
+        <div className="mx-auto max-w-6xl space-y-5">
+          <PageHeader title={pageTitles[activePage]} user={user} onLogout={onLogout} />
+          {content}
+        </div>
+      </main>
+      {loading && <LoadingOverlay />}
+      {toast && <Toast message={toast} />}
+    </div>
+  );
 }
-
-// Recent activity gabungan dari semua tabel produksi
-$activity = mysqli_query($koneksi, "
-    SELECT 'Bahan Masuk' as aktivitas, nama_bahan as deskripsi, tanggal FROM bahan_masuk
-    UNION ALL
-    SELECT 'Cutting' as aktivitas, CONCAT('Hasil cutting ', jumlah_hasil, ' pcs') as deskripsi, tanggal FROM cutting
-    UNION ALL
-    SELECT 'Jahit' as aktivitas, CONCAT('Hasil jahit ', jumlah_hasil, ' pcs - ', status) as deskripsi, tanggal FROM jahit
-    UNION ALL
-    SELECT 'Finishing' as aktivitas, CONCAT('Hasil finishing ', jumlah_hasil, ' pcs - ', status) as deskripsi, tanggal FROM finishing
-    UNION ALL
-    SELECT 'Pengiriman' as aktivitas, CONCAT('Dikirim ', jumlah_kirim, ' pcs') as deskripsi, tanggal_kirim as tanggal FROM pengiriman
-    ORDER BY tanggal DESC
-    LIMIT 5
-");
-$activity_data = [];
-while ($row = mysqli_fetch_assoc($activity)) {
-    $activity_data[] = $row;
-}
-
-// Progress batch yang masih proses
-$progress = mysqli_query($koneksi, "
-    SELECT 
-        b.id_batch,
-        b.nama_batch,
-        b.status,
-        COALESCE(f.jumlah_hasil, 0) as jumlah_finishing,
-        COALESCE(c.jumlah_hasil, 0) as jumlah_cutting,
-        CASE 
-            WHEN f.jumlah_hasil IS NOT NULL THEN 'Finishing'
-            WHEN j.jumlah_hasil IS NOT NULL THEN 'Jahit'
-            WHEN c.jumlah_hasil IS NOT NULL THEN 'Cutting'
-            ELSE 'Bahan Masuk'
-        END as tahap_sekarang,
-        CASE 
-            WHEN f.jumlah_hasil IS NOT NULL AND c.jumlah_hasil > 0 
-                THEN ROUND((f.jumlah_hasil / c.jumlah_hasil) * 100)
-            WHEN j.jumlah_hasil IS NOT NULL AND c.jumlah_hasil > 0 
-                THEN ROUND((j.jumlah_hasil / c.jumlah_hasil) * 100)
-            ELSE 0
-        END as progress_persen
-    FROM batch b
-    LEFT JOIN cutting c ON b.id_batch = c.id_batch
-    LEFT JOIN jahit j ON b.id_batch = j.id_batch
-    LEFT JOIN finishing f ON b.id_batch = f.id_batch
-    WHERE b.status = 'proses'
-    ORDER BY b.tanggal_mulai ASC
-    LIMIT 3
-");
-$progress_data = [];
-while ($row = mysqli_fetch_assoc($progress)) {
-    $progress_data[] = $row;
-}
-
-// Notifikasi batch yang terlambat (lebih dari 7 hari masih proses)
-$notif = mysqli_query($koneksi, "
-    SELECT 
-        nama_batch,
-        DATEDIFF(NOW(), tanggal_mulai) as hari_berjalan
-    FROM batch
-    WHERE status = 'proses'
-    AND DATEDIFF(NOW(), tanggal_mulai) > 7
-    ORDER BY tanggal_mulai ASC
-");
-$notif_data = [];
-while ($row = mysqli_fetch_assoc($notif)) {
-    $notif_data[] = [
-        "judul" => $row['nama_batch'] . " terlambat " . $row['hari_berjalan'] . " hari",
-        "level" => "Perlu perhatian"
-    ];
-}
-
-echo json_encode([
-    "status" => "success",
-    "data"   => [
-        "stats" => [
-            ["label" => "Total Batch",   "value" => (int)$total_batch['total']],
-            ["label" => "Batch Aktif",   "value" => (int)$batch_aktif['total']],
-            ["label" => "Batch Selesai", "value" => (int)$batch_selesai['total']]
-        ],
-        "chart_mingguan"  => $chart_data,
-        "recent_activity" => $activity_data,
-        "progress_batch"  => $progress_data,
-        "notifikasi"      => $notif_data
-    ]
-]);
-?>
