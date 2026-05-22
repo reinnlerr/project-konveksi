@@ -1,8 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import PageHeader from "../components/PageHeader";
 import Sidebar from "../components/Sidebar";
 import { LoadingOverlay, Toast } from "../components/ui";
-import { batchOptions, stats } from "../data/mockData";
+import { stats } from "../data/mockData";
 import BahanMasuk from "./BahanMasuk";
 import Cutting from "./Cutting";
 import DashboardPage from "./DashboardPage";
@@ -10,6 +10,8 @@ import Finishing from "./Finishing";
 import Jahit from "./Jahit";
 import Pengiriman from "./Pengiriman";
 import PesananMasuk from "./PesananMasuk";
+
+const API_URL = "http://localhost/project-konveksi/Backend";
 
 const pageTitles = {
   Dashboard: "Ringkasan Produksi",
@@ -22,45 +24,174 @@ const pageTitles = {
 };
 
 const navByRole = {
-  admin: ["Dashboard", "Pesanan Masuk", "Bahan Masuk", "Cutting", "Jahit", "Finishing", "Pengiriman"],
-  bahan: ["Dashboard", "Bahan Masuk"],
-  cutting: ["Dashboard", "Cutting"],
-  jahit: ["Dashboard", "Jahit"],
-  finishing: ["Dashboard", "Finishing"],
+  admin:      ["Dashboard", "Pesanan Masuk", "Bahan Masuk", "Cutting", "Jahit", "Finishing", "Pengiriman"],
+  bahan:      ["Dashboard", "Bahan Masuk"],
+  cutting:    ["Dashboard", "Cutting"],
+  jahit:      ["Dashboard", "Jahit"],
+  finishing:  ["Dashboard", "Finishing"],
   pengiriman: ["Dashboard", "Pengiriman"]
 };
 
+const endpointMap = {
+  "Bahan Masuk": "bahan_masuk.php",
+  "Cutting":     "cutting.php",
+  "Jahit":       "jahit.php",
+  "Finishing":   "finishing.php",
+  "Pengiriman":  "pengiriman.php",
+};
+
+const statusMap = {
+  "Bahan Masuk": "bahan",
+  "Cutting":     "cutting",
+  "Jahit":       "jahit",
+  "Finishing":   "finishing",
+  "Pengiriman":  "pengiriman",
+};
+
 export default function Dashboard({ user, initialPage = "Dashboard", onLogout, dashboardRole }) {
-  const [activePage, setActivePage] = useState(initialPage);
-  const [loading, setLoading] = useState(false);
-  const [toast, setToast] = useState("");
+  const [activePage, setActivePage]     = useState(initialPage);
+  const [loading, setLoading]           = useState(false);
+  const [toast, setToast]               = useState("");
+  const [toastType, setToastType]       = useState("success");
+  const [batchOptions, setBatchOptions] = useState([]);
 
-  // currentRole dipakai untuk nentuin menu Sidebar (karena dashboardRole dikirim dari App.jsx)
   const currentRole = dashboardRole || user?.role || "cutting";
-  const currentNav = navByRole[currentRole] || ["Dashboard"];
+  const currentNav  = navByRole[currentRole] || ["Dashboard"];
+  const token       = localStorage.getItem("token");
 
-  // 👇 INI YANG KITA PERBAIKI 👇
-  // Sekarang Karyawan dan Admin bebas ngedit di modul yang mereka buka
+  // ── Fetch batch dari API ──
+  useEffect(() => {
+    const fetchBatches = async () => {
+      try {
+        const res  = await fetch(`${API_URL}/bahan_masuk.php?get_batches=true`);
+        const data = await res.json();
+        if (data.status === "success") {
+          setBatchOptions(data.data.map((item) => ({
+            value: item.id_batch,
+            label: item.nama_batch,
+          })));
+        }
+      } catch (err) {
+        console.error("Gagal fetch batch:", err);
+      }
+    };
+    fetchBatches();
+  }, []);
+
   const canEditModule = (moduleRole) => {
-    return user?.role === "admin" || user?.role === "karyawan" || user?.role === moduleRole;
+    return user?.role === "admin" || user?.role === moduleRole;
   };
 
-  const showToast = (message) => {
+  const showToast = (message, type = "success") => {
     setToast(message);
+    setToastType(type);
     window.setTimeout(() => setToast(""), 2200);
   };
 
-  const onSubmitForm = (e, message) => {
+  // ── onSubmitForm yang beneran POST ke backend ──
+  const onSubmitForm = async (e, successMessage) => {
     e.preventDefault();
     setLoading(true);
-    window.setTimeout(() => {
+
+    const form      = new FormData(e.currentTarget);
+    const endpoint  = endpointMap[activePage];
+    const newStatus = statusMap[activePage];
+
+    if (!endpoint) {
       setLoading(false);
-      showToast(message);
-    }, 650);
+      return;
+    }
+
+    let payload = {};
+
+    if (activePage === "Bahan Masuk") {
+      payload = {
+        id_batch:   form.get("id_batch"),
+        nama_bahan: form.get("nama_bahan"),
+        jumlah:     form.get("jumlah"),
+        tanggal:    form.get("tanggal"),
+      };
+    } else if (activePage === "Cutting") {
+      payload = {
+        id_batch:     form.get("batch"),
+        jumlah_hasil: form.get("hasil"),
+        id_user:      user?.id_user,
+        tanggal:      new Date().toISOString().split("T")[0],
+      };
+    } else if (activePage === "Jahit") {
+      payload = {
+        id_batch:     form.get("batch"),
+        jumlah_hasil: form.get("hasil"),
+        id_user:      user?.id_user,
+        tanggal:      new Date().toISOString().split("T")[0],
+      };
+    } else if (activePage === "Finishing") {
+      payload = {
+        id_batch:     form.get("batch"),
+        jumlah_hasil: form.get("hasil"),
+        status:       form.get("status"),
+        id_user:      user?.id_user,
+        tanggal:      new Date().toISOString().split("T")[0],
+      };
+    } else if (activePage === "Pengiriman") {
+      payload = {
+        id_batch: form.get("batch"),
+        jumlah:   form.get("jumlah"),
+        tanggal:  form.get("tanggal"),
+        id_user:  user?.id_user,
+      };
+    }
+
+    try {
+      // 1. Simpan data ke tabel produksi
+      const res  = await fetch(`${API_URL}/${endpoint}`, {
+        method:  "POST",
+        headers: {
+          "Content-Type":  "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+
+      if (data.status === "success") {
+        // 2. Update status order berdasarkan id_batch
+        if (newStatus && payload.id_batch) {
+          await fetch(`${API_URL}/order.php`, {
+            method:  "PUT",
+            headers: {
+              "Content-Type":  "application/json",
+              "Authorization": `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              id_batch:   payload.id_batch,
+              new_status: newStatus,
+            }),
+          });
+        }
+        showToast(successMessage, "success");
+
+        // 3. Refresh batch list
+        const batchRes  = await fetch(`${API_URL}/bahan_masuk.php?get_batches=true`);
+        const batchData = await batchRes.json();
+        if (batchData.status === "success") {
+          setBatchOptions(batchData.data.map((item) => ({
+            value: item.id_batch,
+            label: item.nama_batch,
+          })));
+        }
+      } else {
+        showToast(data.message || "Gagal menyimpan data.", "error");
+      }
+    } catch (err) {
+      showToast("Gagal terhubung ke server.", "error");
+    }
+
+    setLoading(false);
   };
 
   const content = useMemo(() => {
-    if (activePage === "Dashboard") return <DashboardPage stats={stats} />;
+    if (activePage === "Dashboard")     return <DashboardPage stats={stats} />;
     if (activePage === "Pesanan Masuk") return <PesananMasuk />;
     if (activePage === "Bahan Masuk") {
       return <BahanMasuk batchOptions={batchOptions} canEdit={canEditModule("bahan")} onSubmit={onSubmitForm} />;
@@ -78,7 +209,7 @@ export default function Dashboard({ user, initialPage = "Dashboard", onLogout, d
       return <Pengiriman batchOptions={batchOptions} canEdit={canEditModule("pengiriman")} onSubmit={onSubmitForm} />;
     }
     return <DashboardPage stats={stats} />;
-  }, [activePage, user]);
+  }, [activePage, user, batchOptions]);
 
   return (
     <div className="min-h-screen bg-slate-100 md:flex">
