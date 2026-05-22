@@ -38,7 +38,7 @@ export default function RoleSelectionPage({ onLogout }) {
               <button
                 key={role.id}
                 // Begitu diklik, langsung pindah ke dashboard divisinya
-                onClick={() => navigate(`/role/${role.id}`)}
+                onClick={() => onSelectRole(role.id)}
                 className="rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all duration-300 hover:-translate-y-1 hover:border-pink-300 hover:shadow-premium"
               >
                 <span className="inline-flex rounded-xl bg-pink-100 p-2 text-pink-600">

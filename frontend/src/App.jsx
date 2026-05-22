@@ -6,6 +6,7 @@ import Dashboard from "./pages/Dashboard";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import CustomerPage from "./pages/CustomerPage";
+import RoleSelectionPage from "./pages/RoleSelectionPage";
 
 function App() {
   const navigate = useNavigate();
@@ -52,6 +53,8 @@ function App() {
       navigate("/dashboard");
     } else if (result.user.role === "customer") {
       navigate("/customer");
+    } else if (result.user.role === "karyawan") {
+      navigate("/select-role"); // ← karyawan pilih divisi dulu
     } else if (["bahan", "cutting", "jahit", "finishing", "pengiriman"].includes(result.user.role)) {
       navigate(`/role/${result.user.role}`);
     } else {
@@ -59,6 +62,11 @@ function App() {
       setLoginSuccess("");
       logout();
     }
+  };
+
+  const handleSelectRole = (selectedRole) => {
+    localStorage.setItem("dashboardRole", selectedRole);
+    navigate(`/role/${selectedRole}`);
   };
 
   const handleRegister = async (e) => {
@@ -110,6 +118,7 @@ function App() {
 
   const handleLogout = () => {
     localStorage.removeItem("token");
+    localStorage.removeItem("dashboardRole");
     logout();
     setLoginError("");
     setRegisterError("");
@@ -117,6 +126,10 @@ function App() {
     setRegisterSuccess("");
     navigate("/login");
   };
+
+  // karyawan yang sudah pilih divisi, atau role spesifik
+  const isKaryawan = Boolean(user) && 
+    (user?.role === "karyawan" || ["bahan","cutting","jahit","finishing","pengiriman"].includes(user?.role));
 
   return (
     <Routes>
@@ -145,10 +158,22 @@ function App() {
           </ProtectedRoute>
         }
       />
+
+      {/* Karyawan pilih divisi */}
+      <Route
+        path="/select-role"
+        element={
+          <ProtectedRoute isAllowed={Boolean(user) && user?.role === "karyawan"}>
+            <RoleSelectionPage onSelectRole={handleSelectRole} />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Route divisi — izinkan karyawan (sudah pilih divisi) atau role spesifik */}
       <Route
         path="/role/bahan"
         element={
-          <ProtectedRoute isAllowed={Boolean(user) && user?.role === "bahan"}>
+          <ProtectedRoute isAllowed={isKaryawan}>
             <Dashboard user={user} dashboardRole="bahan" initialPage="Dashboard" onLogout={handleLogout} />
           </ProtectedRoute>
         }
@@ -156,7 +181,7 @@ function App() {
       <Route
         path="/role/cutting"
         element={
-          <ProtectedRoute isAllowed={Boolean(user) && user?.role === "cutting"}>
+          <ProtectedRoute isAllowed={isKaryawan}>
             <Dashboard user={user} dashboardRole="cutting" initialPage="Dashboard" onLogout={handleLogout} />
           </ProtectedRoute>
         }
@@ -164,7 +189,7 @@ function App() {
       <Route
         path="/role/jahit"
         element={
-          <ProtectedRoute isAllowed={Boolean(user) && user?.role === "jahit"}>
+          <ProtectedRoute isAllowed={isKaryawan}>
             <Dashboard user={user} dashboardRole="jahit" initialPage="Dashboard" onLogout={handleLogout} />
           </ProtectedRoute>
         }
@@ -172,7 +197,7 @@ function App() {
       <Route
         path="/role/finishing"
         element={
-          <ProtectedRoute isAllowed={Boolean(user) && user?.role === "finishing"}>
+          <ProtectedRoute isAllowed={isKaryawan}>
             <Dashboard user={user} dashboardRole="finishing" initialPage="Dashboard" onLogout={handleLogout} />
           </ProtectedRoute>
         }
@@ -180,11 +205,12 @@ function App() {
       <Route
         path="/role/pengiriman"
         element={
-          <ProtectedRoute isAllowed={Boolean(user) && user?.role === "pengiriman"}>
+          <ProtectedRoute isAllowed={isKaryawan}>
             <Dashboard user={user} dashboardRole="pengiriman" initialPage="Dashboard" onLogout={handleLogout} />
           </ProtectedRoute>
         }
       />
+
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );
