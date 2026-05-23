@@ -164,7 +164,7 @@ function App() {
         path="/select-role"
         element={
           <ProtectedRoute isAllowed={Boolean(user) && user?.role === "karyawan"}>
-            <RoleSelectionPage onSelectRole={handleSelectRole} />
+          <RoleSelectionPage onSelectRole={handleSelectRole} onLogout={handleLogout} />
           </ProtectedRoute>
         }
       />
