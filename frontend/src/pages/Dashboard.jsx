@@ -79,9 +79,8 @@ export default function Dashboard({ user, initialPage = "Dashboard", onLogout, d
   }, []);
 
   const canEditModule = (moduleRole) => {
-    return user?.role === "admin" || user?.role === moduleRole;
-  };
-
+  return user?.role === "admin" || user?.role === "karyawan" || user?.role === moduleRole;
+};
   const showToast = (message, type = "success") => {
     setToast(message);
     setToastType(type);
