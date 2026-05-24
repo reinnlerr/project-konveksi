@@ -137,8 +137,8 @@ export default function Dashboard({ user, initialPage = "Dashboard", onLogout, d
     } else if (activePage === "Pengiriman") {
       payload = {
         id_batch: form.get("batch"),
-        jumlah:   form.get("jumlah"),
-        tanggal:  form.get("tanggal"),
+        jumlah_kirim:   form.get("jumlah"),
+        tanggal_kirim:  form.get("tanggal"),
         id_user:  user?.id_user,
       };
       newStatus = "selesai"; // ── Pengiriman → order selesai ──
