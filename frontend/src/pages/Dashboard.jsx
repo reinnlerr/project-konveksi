@@ -45,7 +45,7 @@ const statusMap = {
   "Cutting":     "cutting",
   "Jahit":       "jahit",
   "Finishing":   "finishing",
-  "Pengiriman":  "pengiriman",
+  "Pengiriman":  "selesai",
 };
 
 export default function Dashboard({ user, initialPage = "Dashboard", onLogout, dashboardRole }) {
@@ -59,7 +59,6 @@ export default function Dashboard({ user, initialPage = "Dashboard", onLogout, d
   const currentNav  = navByRole[currentRole] || ["Dashboard"];
   const token       = localStorage.getItem("token");
 
-  // ── Fetch batch dari API ──
   useEffect(() => {
     const fetchBatches = async () => {
       try {
@@ -79,22 +78,22 @@ export default function Dashboard({ user, initialPage = "Dashboard", onLogout, d
   }, []);
 
   const canEditModule = (moduleRole) => {
-  return user?.role === "admin" || user?.role === "karyawan" || user?.role === moduleRole;
-};
+    return user?.role === "admin" || user?.role === "karyawan" || user?.role === moduleRole;
+  };
+
   const showToast = (message, type = "success") => {
     setToast(message);
     setToastType(type);
     window.setTimeout(() => setToast(""), 2200);
   };
 
-  // ── onSubmitForm yang beneran POST ke backend ──
   const onSubmitForm = async (e, successMessage) => {
     e.preventDefault();
     setLoading(true);
 
-    const form      = new FormData(e.currentTarget);
-    const endpoint  = endpointMap[activePage];
-    const newStatus = statusMap[activePage];
+    const form     = new FormData(e.currentTarget);
+    const endpoint = endpointMap[activePage];
+    let newStatus  = statusMap[activePage];
 
     if (!endpoint) {
       setLoading(false);
@@ -125,13 +124,16 @@ export default function Dashboard({ user, initialPage = "Dashboard", onLogout, d
         tanggal:      new Date().toISOString().split("T")[0],
       };
     } else if (activePage === "Finishing") {
+      const finishingStatus = form.get("status");
       payload = {
         id_batch:     form.get("batch"),
         jumlah_hasil: form.get("hasil"),
-        status:       form.get("status"),
+        status:       finishingStatus,
         id_user:      user?.id_user,
         tanggal:      new Date().toISOString().split("T")[0],
       };
+      // ── Selesai → pengiriman, Revisi → kembali ke jahit ──
+      newStatus = finishingStatus === "Selesai" ? "pengiriman" : "jahit";
     } else if (activePage === "Pengiriman") {
       payload = {
         id_batch: form.get("batch"),
@@ -139,10 +141,10 @@ export default function Dashboard({ user, initialPage = "Dashboard", onLogout, d
         tanggal:  form.get("tanggal"),
         id_user:  user?.id_user,
       };
+      newStatus = "selesai"; // ── Pengiriman → order selesai ──
     }
 
     try {
-      // 1. Simpan data ke tabel produksi
       const res  = await fetch(`${API_URL}/${endpoint}`, {
         method:  "POST",
         headers: {
@@ -154,7 +156,7 @@ export default function Dashboard({ user, initialPage = "Dashboard", onLogout, d
       const data = await res.json();
 
       if (data.status === "success") {
-        // 2. Update status order berdasarkan id_batch
+        // ── Update status order ──
         if (newStatus && payload.id_batch) {
           await fetch(`${API_URL}/orders.php`, {
             method:  "PUT",
@@ -170,7 +172,7 @@ export default function Dashboard({ user, initialPage = "Dashboard", onLogout, d
         }
         showToast(successMessage, "success");
 
-        // 3. Refresh batch list
+        // ── Refresh batch list ──
         const batchRes  = await fetch(`${API_URL}/bahan_masuk.php?get_batches=true`);
         const batchData = await batchRes.json();
         if (batchData.status === "success") {
