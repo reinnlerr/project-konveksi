@@ -156,7 +156,7 @@ export default function Dashboard({ user, initialPage = "Dashboard", onLogout, d
       if (data.status === "success") {
         // 2. Update status order berdasarkan id_batch
         if (newStatus && payload.id_batch) {
-          await fetch(`${API_URL}/order.php`, {
+          await fetch(`${API_URL}/orders.php`, {
             method:  "PUT",
             headers: {
               "Content-Type":  "application/json",
