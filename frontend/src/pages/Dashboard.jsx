@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import PageHeader from "../components/PageHeader";
 import Sidebar from "../components/Sidebar";
 import { LoadingOverlay, Toast } from "../components/ui";
-import { stats } from "../data/mockData";
 import BahanMasuk from "./BahanMasuk";
 import Cutting from "./Cutting";
 import DashboardPage from "./DashboardPage";
@@ -10,21 +9,23 @@ import Finishing from "./Finishing";
 import Jahit from "./Jahit";
 import Pengiriman from "./Pengiriman";
 import PesananMasuk from "./PesananMasuk";
+import ReportPage from "./ReportPage"; // ← tambah ini
 
 const API_URL = "http://localhost/project-konveksi/Backend";
 
 const pageTitles = {
-  Dashboard: "Ringkasan Produksi",
-  "Pesanan Masuk": "Daftar Pesanan Customer",
-  "Bahan Masuk": "Input Bahan Masuk",
-  Cutting: "Input Hasil Cutting",
-  Jahit: "Input Hasil Jahit",
-  Finishing: "Input Hasil Finishing",
-  Pengiriman: "Input Data Pengiriman"
+  Dashboard:      "Ringkasan Produksi",
+  "Pesanan Masuk":"Daftar Pesanan Customer",
+  "Bahan Masuk":  "Input Bahan Masuk",
+  Cutting:        "Input Hasil Cutting",
+  Jahit:          "Input Hasil Jahit",
+  Finishing:      "Input Hasil Finishing",
+  Pengiriman:     "Input Data Pengiriman",
+  Laporan:        "Laporan Produksi",  // ← tambah ini
 };
 
 const navByRole = {
-  admin:      ["Dashboard", "Pesanan Masuk", "Bahan Masuk", "Cutting", "Jahit", "Finishing", "Pengiriman"],
+  admin:      ["Dashboard", "Pesanan Masuk", "Bahan Masuk", "Cutting", "Jahit", "Finishing", "Pengiriman", "Laporan"], // ← tambah Laporan
   bahan:      ["Dashboard", "Bahan Masuk"],
   cutting:    ["Dashboard", "Cutting"],
   jahit:      ["Dashboard", "Jahit"],
@@ -95,10 +96,7 @@ export default function Dashboard({ user, initialPage = "Dashboard", onLogout, d
     const endpoint = endpointMap[activePage];
     let newStatus  = statusMap[activePage];
 
-    if (!endpoint) {
-      setLoading(false);
-      return;
-    }
+    if (!endpoint) { setLoading(false); return; }
 
     let payload = {};
 
@@ -132,16 +130,15 @@ export default function Dashboard({ user, initialPage = "Dashboard", onLogout, d
         id_user:      user?.id_user,
         tanggal:      new Date().toISOString().split("T")[0],
       };
-      // ── Selesai → pengiriman, Revisi → kembali ke jahit ──
       newStatus = finishingStatus === "Selesai" ? "pengiriman" : "jahit";
     } else if (activePage === "Pengiriman") {
       payload = {
-        id_batch: form.get("batch"),
-        jumlah_kirim:   form.get("jumlah"),
-        tanggal_kirim:  form.get("tanggal"),
-        id_user:  user?.id_user,
+        id_batch:      form.get("batch"),
+        jumlah_kirim:  form.get("jumlah"),
+        tanggal_kirim: form.get("tanggal"),
+        id_user:       user?.id_user,
       };
-      newStatus = "selesai"; // ── Pengiriman → order selesai ──
+      newStatus = "selesai";
     }
 
     try {
@@ -156,7 +153,6 @@ export default function Dashboard({ user, initialPage = "Dashboard", onLogout, d
       const data = await res.json();
 
       if (data.status === "success") {
-        // ── Update status order ──
         if (newStatus && payload.id_batch) {
           await fetch(`${API_URL}/orders.php`, {
             method:  "PUT",
@@ -172,7 +168,6 @@ export default function Dashboard({ user, initialPage = "Dashboard", onLogout, d
         }
         showToast(successMessage, "success");
 
-        // ── Refresh batch list ──
         const batchRes  = await fetch(`${API_URL}/bahan_masuk.php?get_batches=true`);
         const batchData = await batchRes.json();
         if (batchData.status === "success") {
@@ -192,8 +187,9 @@ export default function Dashboard({ user, initialPage = "Dashboard", onLogout, d
   };
 
   const content = useMemo(() => {
-    if (activePage === "Dashboard")     return <DashboardPage stats={stats} />;
+    if (activePage === "Dashboard")     return <DashboardPage user={user} />;
     if (activePage === "Pesanan Masuk") return <PesananMasuk />;
+    if (activePage === "Laporan")       return <ReportPage />; // ← tambah ini
     if (activePage === "Bahan Masuk") {
       return <BahanMasuk batchOptions={batchOptions} canEdit={canEditModule("bahan")} onSubmit={onSubmitForm} />;
     }
@@ -209,7 +205,7 @@ export default function Dashboard({ user, initialPage = "Dashboard", onLogout, d
     if (activePage === "Pengiriman") {
       return <Pengiriman batchOptions={batchOptions} canEdit={canEditModule("pengiriman")} onSubmit={onSubmitForm} />;
     }
-    return <DashboardPage stats={stats} />;
+    return <DashboardPage user={user} />;
   }, [activePage, user, batchOptions]);
 
   return (
@@ -217,7 +213,7 @@ export default function Dashboard({ user, initialPage = "Dashboard", onLogout, d
       <Sidebar navItems={currentNav} activePage={activePage} onChange={setActivePage} />
       <main className="flex-1 p-4 md:p-8">
         <div className="mx-auto max-w-6xl space-y-5">
-          <PageHeader title={pageTitles[activePage]} user={user} onLogout={onLogout} />
+          <PageHeader title={pageTitles[activePage] || activePage} user={user} onLogout={onLogout} />
           {content}
         </div>
       </main>
