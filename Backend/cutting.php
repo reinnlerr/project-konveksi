@@ -65,7 +65,7 @@ switch ($method) {
             INSERT INTO cutting (id_batch, jumlah_hasil, tanggal, id_user) 
             VALUES (?, ?, ?, ?)
         ");
-        mysqli_stmt_bind_param($stmt, "isii", $id_batch, $jumlah_hasil, $tanggal, $id_user);
+        mysqli_stmt_bind_param($stmt, "iisi", $id_batch, $jumlah_hasil, $tanggal, $id_user);
 
         if (mysqli_stmt_execute($stmt)) {
             echo json_encode([
@@ -101,7 +101,7 @@ switch ($method) {
             SET jumlah_hasil = ?, tanggal = ?, id_user = ? 
             WHERE id_cutting = ?
         ");
-        mysqli_stmt_bind_param($stmt, "isii", $jumlah_hasil, $tanggal, $id_user, $id_cutting);
+        mysqli_stmt_bind_param($stmt, "iisi", $jumlah_hasil, $tanggal, $id_user, $id_cutting);
 
         if (mysqli_stmt_execute($stmt)) {
             echo json_encode([
