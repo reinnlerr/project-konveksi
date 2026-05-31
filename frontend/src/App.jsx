@@ -10,12 +10,15 @@ import RoleSelectionPage from "./pages/RoleSelectionPage";
 
 function App() {
   const navigate = useNavigate();
-  const { user, login, register, logout } = useAuth();
-  const [loading, setLoading] = useState(false);
+  const { user, login, register, logout, loading } = useAuth(); // ← tambah loading
+  const [formLoading, setFormLoading] = useState(false);
   const [loginError, setLoginError] = useState("");
   const [registerError, setRegisterError] = useState("");
   const [loginSuccess, setLoginSuccess] = useState("");
   const [registerSuccess, setRegisterSuccess] = useState("");
+
+  // ← Tunggu sampai localStorage selesai dibaca
+  if (loading) return null;
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -29,14 +32,14 @@ function App() {
       return;
     }
 
-    setLoading(true);
+    setFormLoading(true);
     setLoginError("");
     setLoginSuccess("");
 
     const result = await login({ email, password });
 
     if (!result.ok) {
-      setLoading(false);
+      setFormLoading(false);
       setLoginError(result.message);
       setLoginSuccess("");
       return;
@@ -47,14 +50,14 @@ function App() {
     }
 
     setLoginSuccess(result.message);
-    setLoading(false);
+    setFormLoading(false);
 
     if (result.user.role === "admin") {
       navigate("/dashboard");
     } else if (result.user.role === "customer") {
       navigate("/customer");
     } else if (result.user.role === "karyawan") {
-      navigate("/select-role"); // ← karyawan pilih divisi dulu
+      navigate("/select-role");
     } else if (["bahan", "cutting", "jahit", "finishing", "pengiriman"].includes(result.user.role)) {
       navigate(`/role/${result.user.role}`);
     } else {
@@ -100,10 +103,10 @@ function App() {
 
     setRegisterError("");
     setRegisterSuccess("");
-    setLoading(true);
+    setFormLoading(true);
 
     const result = await register({ email, password, confirmPassword, role });
-    setLoading(false);
+    setFormLoading(false);
 
     if (!result.ok) {
       setRegisterError(result.message);
@@ -127,8 +130,7 @@ function App() {
     navigate("/login");
   };
 
-  // karyawan yang sudah pilih divisi, atau role spesifik
-  const isKaryawan = Boolean(user) && 
+  const isKaryawan = Boolean(user) &&
     (user?.role === "karyawan" || ["bahan","cutting","jahit","finishing","pengiriman"].includes(user?.role));
 
   return (
@@ -136,11 +138,11 @@ function App() {
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route
         path="/login"
-        element={<LoginPage onLogin={handleLogin} loading={loading} error={loginError} success={loginSuccess} />}
+        element={<LoginPage onLogin={handleLogin} loading={formLoading} error={loginError} success={loginSuccess} />}
       />
       <Route
         path="/register"
-        element={<RegisterPage onRegister={handleRegister} loading={loading} error={registerError} success={registerSuccess} />}
+        element={<RegisterPage onRegister={handleRegister} loading={formLoading} error={registerError} success={registerSuccess} />}
       />
       <Route
         path="/dashboard"
@@ -158,18 +160,14 @@ function App() {
           </ProtectedRoute>
         }
       />
-
-      {/* Karyawan pilih divisi */}
       <Route
         path="/select-role"
         element={
           <ProtectedRoute isAllowed={Boolean(user) && user?.role === "karyawan"}>
-          <RoleSelectionPage onSelectRole={handleSelectRole} onLogout={handleLogout} />
+            <RoleSelectionPage onSelectRole={handleSelectRole} onLogout={handleLogout} />
           </ProtectedRoute>
         }
       />
-
-      {/* Route divisi — izinkan karyawan (sudah pilih divisi) atau role spesifik */}
       <Route
         path="/role/bahan"
         element={
@@ -210,7 +208,6 @@ function App() {
           </ProtectedRoute>
         }
       />
-
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );
