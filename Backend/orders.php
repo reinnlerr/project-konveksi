@@ -94,18 +94,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
         exit;
     }
 
-    // ── Simpel, langsung pakai id_batch ──
+    // ── Update status order ──
     $stmt = mysqli_prepare($koneksi, "
         UPDATE orders SET status = ? 
         WHERE id_batch = ? AND status != 'selesai'
     ");
     mysqli_stmt_bind_param($stmt, "si", $new_status, $id_batch);
+    mysqli_stmt_execute($stmt);
 
-    if (mysqli_stmt_execute($stmt)) {
-        echo json_encode(["status" => "success", "message" => "Status order diupdate."]);
-    } else {
-        echo json_encode(["status" => "error", "message" => "Gagal update status."]);
+    // ── Kalau selesai, update juga tabel batch ──
+    if ($new_status === 'selesai') {
+        $stmt2 = mysqli_prepare($koneksi, "UPDATE batch SET status = 'selesai' WHERE id_batch = ?");
+        mysqli_stmt_bind_param($stmt2, "i", $id_batch);
+        mysqli_stmt_execute($stmt2);
     }
+
+    echo json_encode(["status" => "success", "message" => "Status order diupdate."]);
     exit;
 }
 ?>

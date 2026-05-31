@@ -212,7 +212,7 @@ export default function Dashboard({ user, initialPage = "Dashboard", onLogout, d
     <div className="min-h-screen bg-slate-100 md:flex">
       <Sidebar navItems={currentNav} activePage={activePage} onChange={setActivePage} />
       <main className="flex-1 p-4 md:p-8">
-        <div className="mx-auto max-w-6xl space-y-5">
+        <div className="mx-auto max-w-full space-y-5">
           <PageHeader title={pageTitles[activePage] || activePage} user={user} onLogout={onLogout} />
           {content}
         </div>
