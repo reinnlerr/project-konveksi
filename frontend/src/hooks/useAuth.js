@@ -2,10 +2,12 @@ import { useEffect, useState } from "react";
 import { getCurrentUser, loginUser, logoutUser, registerUser } from "../services/authService";
 
 export default function useAuth() {
-  const [user, setUser] = useState(null);
+  const [user, setUser]       = useState(null);
+  const [loading, setLoading] = useState(true); // ← tambah ini
 
   useEffect(() => {
-    setUser(getCurrentUser()); // ← hapus getUsers()
+    setUser(getCurrentUser());
+    setLoading(false); // ← selesai baca localStorage
   }, []);
 
   const login = async (payload) => {
@@ -24,5 +26,5 @@ export default function useAuth() {
     setUser(null);
   };
 
-  return { user, login, register, logout };
+  return { user, login, register, logout, loading }; // ← export loading
 }
