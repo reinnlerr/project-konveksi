@@ -18,6 +18,7 @@ $result = mysqli_query($koneksi, "
         b.nama_batch,
         b.status as status_batch,
         b.tanggal_mulai,
+        o.status as status_order,
         o.jenis_baju,
         o.jumlah as jumlah_order,
         o.deadline,

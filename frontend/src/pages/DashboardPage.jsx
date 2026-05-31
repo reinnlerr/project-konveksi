@@ -131,8 +131,8 @@ export default function DashboardPage({ user }) {
             <p className="text-sm text-slate-400">Belum ada batch.</p>
           ) : (
             batches.map((batch) => {
-              const progress = stageProgress[batch.status_batch] || 0;
-              const stage    = stageLabel[batch.status_batch] || batch.status_batch;
+              const progress = stageProgress[batch.status_order] || 0;
+              const stage    = stageLabel[batch.status_order] || batch.status_order;
               return (
                 <div key={batch.id_batch}>
                   <div className="mb-1 flex items-center justify-between text-sm">
