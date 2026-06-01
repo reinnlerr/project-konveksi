@@ -25,7 +25,7 @@ const pageTitles = {
 };
 
 const navByRole = {
-  admin:      ["Dashboard", "Pesanan Masuk", "Bahan Masuk", "Cutting", "Jahit", "Finishing", "Pengiriman", "Laporan"], // ← tambah Laporan
+  admin:      ["Dashboard", "Pesanan Masuk", "Laporan"],
   bahan:      ["Dashboard", "Bahan Masuk"],
   cutting:    ["Dashboard", "Cutting"],
   jahit:      ["Dashboard", "Jahit"],
