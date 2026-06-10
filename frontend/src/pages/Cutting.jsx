@@ -57,7 +57,7 @@ export default function Cutting({ batchOptions, onSubmit, canEdit }) {
         await fetch(`${API_URL}/orders.php`, {
           method: "PUT",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ id_batch: task.id_batch, new_status: "jahit" }), // ← fix: cutting → jahit
+          body: JSON.stringify({ id_batch: task.id_batch, new_status: "jahit" }),
         });
         fetchHistory();
         fetchTasks();

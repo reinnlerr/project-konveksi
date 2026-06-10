@@ -57,7 +57,7 @@ export default function Jahit({ batchOptions, onSubmit, canEdit }) {
         await fetch(`${API_URL}/orders.php`, {
           method: "PUT",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ id_batch: task.id_batch, new_status: "jahit" }),
+          body: JSON.stringify({ id_batch: task.id_batch, new_status: "finishing" }),
         });
         fetchHistory();
         fetchTasks();
