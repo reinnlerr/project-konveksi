@@ -38,36 +38,17 @@ $role = isset($_GET['role']) ? trim($_GET['role']) : '';
 
 switch ($role) {
     case 'bahan':
-        // Order yang sudah di-approve tapi belum ada bahan masuknya
         $result = mysqli_query($koneksi, "
             SELECT o.id_order, o.jenis_baju, o.jumlah, o.deadline, o.catatan,
                    b.id_batch, b.nama_batch
             FROM orders o
             INNER JOIN batch b ON o.id_batch = b.id_batch
             WHERE o.status = 'bahan'
-              AND NOT EXISTS (
-                  SELECT 1 FROM bahan_masuk bm WHERE bm.id_batch = b.id_batch
-              )
             ORDER BY o.deadline ASC
         ");
         break;
 
     case 'cutting':
-        // Order yang bahan sudah masuk, belum di-cutting
-        $result = mysqli_query($koneksi, "
-            SELECT o.id_order, o.jenis_baju, o.jumlah, o.deadline, o.catatan,
-                   b.id_batch, b.nama_batch
-            FROM orders o
-            INNER JOIN batch b ON o.id_batch = b.id_batch
-            WHERE o.status = 'bahan'
-              AND EXISTS (
-                  SELECT 1 FROM bahan_masuk bm WHERE bm.id_batch = b.id_batch
-              )
-            ORDER BY o.deadline ASC
-        ");
-        break;
-
-    case 'jahit':
         $result = mysqli_query($koneksi, "
             SELECT o.id_order, o.jenis_baju, o.jumlah, o.deadline, o.catatan,
                    b.id_batch, b.nama_batch
@@ -78,13 +59,24 @@ switch ($role) {
         ");
         break;
 
-    case 'finishing':
+    case 'jahit':
         $result = mysqli_query($koneksi, "
             SELECT o.id_order, o.jenis_baju, o.jumlah, o.deadline, o.catatan,
                    b.id_batch, b.nama_batch
             FROM orders o
             INNER JOIN batch b ON o.id_batch = b.id_batch
             WHERE o.status = 'jahit'
+            ORDER BY o.deadline ASC
+        ");
+        break;
+
+    case 'finishing':
+        $result = mysqli_query($koneksi, "
+            SELECT o.id_order, o.jenis_baju, o.jumlah, o.deadline, o.catatan,
+                   b.id_batch, b.nama_batch
+            FROM orders o
+            INNER JOIN batch b ON o.id_batch = b.id_batch
+            WHERE o.status = 'finishing'
             ORDER BY o.deadline ASC
         ");
         break;

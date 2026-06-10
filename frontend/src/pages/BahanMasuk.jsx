@@ -61,6 +61,7 @@ export default function BahanMasuk({ onSubmit, canEdit }) {
     const today = new Date().toISOString().split("T")[0];
 
     try {
+      // 1. Simpan bahan masuk
       const res = await fetch(`${API_URL}/bahan_masuk.php`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -72,13 +73,24 @@ export default function BahanMasuk({ onSubmit, canEdit }) {
         }),
       });
       const data = await res.json();
+
       if (data.status === "success") {
+        // 2. Update status order ke 'cutting' biar karyawan cutting bisa lihat tugasnya
+        await fetch(`${API_URL}/orders.php`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ id_batch: task.id_batch, new_status: "cutting" }),
+        });
+
         fetchBatches();
         fetchHistory();
         fetchTasks();
         setNamaBahan(prev => ({ ...prev, [task.id_batch]: "" }));
+      } else {
+        alert("Gagal simpan: " + data.message);
       }
     } catch { console.error("Quick process bahan gagal"); }
+
     setProcessingId(null);
   };
 
@@ -103,7 +115,9 @@ export default function BahanMasuk({ onSubmit, canEdit }) {
                     {task.jenis_baju} · <span className="font-medium">{task.jumlah} pcs</span>
                   </p>
                   <p className="text-xs text-slate-400">Deadline: {task.deadline}</p>
-                  {task.catatan && <p className="text-xs text-slate-400 mt-0.5">📝 {task.catatan}</p>}
+                  {task.catatan && (
+                    <p className="text-xs text-slate-400 mt-0.5">📝 {task.catatan}</p>
+                  )}
                 </div>
                 <div className="flex gap-2">
                   <input
