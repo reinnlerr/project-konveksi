@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
-import FormPage from "./FormPage";
 
 const API_URL = "http://localhost/project-konveksi/Backend";
 
-export default function Cutting({ batchOptions, onSubmit, canEdit }) {
+export default function Cutting() {
   const [history, setHistory]           = useState([]);
   const [tasks, setTasks]               = useState([]);
   const [processingId, setProcessingId] = useState(null);
@@ -31,12 +30,6 @@ export default function Cutting({ batchOptions, onSubmit, canEdit }) {
   };
 
   useEffect(() => { fetchHistory(); fetchTasks(); }, []);
-
-  const handleSubmit = async (e) => {
-    await onSubmit(e, "Data cutting berhasil disimpan.");
-    fetchHistory();
-    fetchTasks();
-  };
 
   const handleQuickProcess = async (task) => {
     setProcessingId(task.id_batch);
@@ -68,12 +61,23 @@ export default function Cutting({ batchOptions, onSubmit, canEdit }) {
 
   return (
     <div className="space-y-4">
-      {tasks.length > 0 && (
-        <div className="card p-5 border-l-4 border-pink-500">
-          <h3 className="mb-3 font-semibold text-slate-800 flex items-center gap-2">
-            ⚡ Tugas Aktif
-            <span className="rounded-full bg-pink-100 px-2 py-0.5 text-xs text-pink-600 font-medium">{tasks.length} order</span>
-          </h3>
+
+      {/* Tugas Aktif */}
+      <div className="card p-5 border-l-4 border-pink-500">
+        <h3 className="mb-3 font-semibold text-slate-800 flex items-center gap-2">
+          ⚡ Tugas Aktif
+          {tasks.length > 0 && (
+            <span className="rounded-full bg-pink-100 px-2 py-0.5 text-xs text-pink-600 font-medium">
+              {tasks.length} order
+            </span>
+          )}
+        </h3>
+
+        {tasks.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-slate-300 p-6 text-center">
+            <p className="text-sm text-slate-400">Tidak ada tugas aktif saat ini</p>
+          </div>
+        ) : (
           <div className="space-y-3">
             {tasks.map((task) => (
               <div key={task.id_batch} className="flex items-center justify-between rounded-xl border border-slate-200 p-4 hover:border-pink-300 hover:bg-pink-50/20 transition">
@@ -93,19 +97,10 @@ export default function Cutting({ batchOptions, onSubmit, canEdit }) {
               </div>
             ))}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
-      <FormPage
-        fields={[
-          { label: "Pilih Batch", name: "batch", type: "select", options: batchOptions },
-          { label: "Jumlah Hasil Cutting", name: "hasil", type: "number", placeholder: "0" },
-        ]}
-        submitText="Simpan Cutting"
-        canEdit={canEdit}
-        onSubmit={handleSubmit}
-      />
-
+      {/* Riwayat */}
       <div className="card p-5">
         <h3 className="mb-3 text-base font-semibold text-slate-800">Riwayat Cutting</h3>
         {history.length === 0 ? (

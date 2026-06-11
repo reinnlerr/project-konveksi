@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
-import FormPage from "./FormPage";
 
 const API_URL = "http://localhost/project-konveksi/Backend";
 
-export default function Finishing({ batchOptions, onSubmit, canEdit }) {
+export default function Finishing() {
   const [history, setHistory]           = useState([]);
   const [tasks, setTasks]               = useState([]);
   const [processingId, setProcessingId] = useState(null);
@@ -32,16 +31,10 @@ export default function Finishing({ batchOptions, onSubmit, canEdit }) {
 
   useEffect(() => { fetchHistory(); fetchTasks(); }, []);
 
-  const handleSubmit = async (e) => {
-    await onSubmit(e, "Data finishing berhasil disimpan.");
-    fetchHistory();
-    fetchTasks();
-  };
-
   const handleQuickProcess = async (task, status) => {
     setProcessingId(`${task.id_batch}-${status}`);
     const today = new Date().toISOString().split("T")[0];
-    const newOrderStatus = status === "Selesai" ? "pengiriman" : "jahit";
+    const newOrderStatus = status === "Selesai" ? "pengiriman" : "menunggu_revisi";
 
     try {
       const res = await fetch(`${API_URL}/finishing.php`, {
@@ -71,12 +64,23 @@ export default function Finishing({ batchOptions, onSubmit, canEdit }) {
 
   return (
     <div className="space-y-4">
-      {tasks.length > 0 && (
-        <div className="card p-5 border-l-4 border-pink-500">
-          <h3 className="mb-3 font-semibold text-slate-800 flex items-center gap-2">
-            ⚡ Tugas Aktif
-            <span className="rounded-full bg-pink-100 px-2 py-0.5 text-xs text-pink-600 font-medium">{tasks.length} order</span>
-          </h3>
+
+      {/* Tugas Aktif */}
+      <div className="card p-5 border-l-4 border-pink-500">
+        <h3 className="mb-3 font-semibold text-slate-800 flex items-center gap-2">
+          ⚡ Tugas Aktif
+          {tasks.length > 0 && (
+            <span className="rounded-full bg-pink-100 px-2 py-0.5 text-xs text-pink-600 font-medium">
+              {tasks.length} order
+            </span>
+          )}
+        </h3>
+
+        {tasks.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-slate-300 p-6 text-center">
+            <p className="text-sm text-slate-400">Tidak ada tugas aktif saat ini</p>
+          </div>
+        ) : (
           <div className="space-y-3">
             {tasks.map((task) => (
               <div key={task.id_batch} className="rounded-xl border border-slate-200 p-4 hover:border-pink-300 transition">
@@ -99,26 +103,16 @@ export default function Finishing({ batchOptions, onSubmit, canEdit }) {
                     disabled={!!processingId}
                     className="flex-1 rounded-xl bg-gradient-to-r from-orange-400 to-red-400 px-3 py-2 text-sm font-semibold text-white hover:from-orange-500 hover:to-red-500 disabled:opacity-60 transition"
                   >
-                    {processingId === `${task.id_batch}-Revisi` ? "Memproses..." : "🔄 Revisi"}
+                    {processingId === `${task.id_batch}-Revisi` ? "Memproses..." : "🔄 Minta Revisi"}
                   </button>
                 </div>
               </div>
             ))}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
-      <FormPage
-        fields={[
-          { label: "Pilih Batch", name: "batch", type: "select", options: batchOptions },
-          { label: "Jumlah Hasil", name: "hasil", type: "number", placeholder: "0" },
-          { label: "Status", name: "status", type: "select", options: ["Selesai", "Revisi"] },
-        ]}
-        submitText="Simpan Finishing"
-        canEdit={canEdit}
-        onSubmit={handleSubmit}
-      />
-
+      {/* Riwayat */}
       <div className="card p-5">
         <h3 className="mb-3 text-base font-semibold text-slate-800">Riwayat Finishing</h3>
         {history.length === 0 ? (
@@ -141,7 +135,11 @@ export default function Finishing({ batchOptions, onSubmit, canEdit }) {
                     <td className="py-2 pr-4">{row.nama_batch}</td>
                     <td className="py-2 pr-4">{row.jumlah_hasil} pcs</td>
                     <td className="py-2 pr-4">
-                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${row.status?.toLowerCase() === "revisi" ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"}`}>
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                        row.status?.toLowerCase() === "revisi"
+                          ? "bg-red-100 text-red-600"
+                          : "bg-green-100 text-green-600"
+                      }`}>
                         {row.status || "-"}
                       </span>
                     </td>
