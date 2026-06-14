@@ -7,23 +7,25 @@ import Cutting from "./Cutting";
 import DashboardPage from "./DashboardPage";
 import Finishing from "./Finishing";
 import Jahit from "./Jahit";
+import ManajemenUser from "./ManajemenUser"; // ← baru
 import Pengiriman from "./Pengiriman";
 import PesananMasuk from "./PesananMasuk";
 import ReportPage from "./ReportPage";
 
 const pageTitles = {
-  Dashboard:       "Ringkasan Produksi",
-  "Pesanan Masuk": "Daftar Pesanan Customer",
-  "Bahan Masuk":   "Input Bahan Masuk",
-  Cutting:         "Input Hasil Cutting",
-  Jahit:           "Input Hasil Jahit",
-  Finishing:       "Input Hasil Finishing",
-  Pengiriman:      "Input Data Pengiriman",
-  Laporan:         "Laporan Produksi",
+  Dashboard:         "Ringkasan Produksi",
+  "Pesanan Masuk":   "Daftar Pesanan Customer",
+  "Manajemen User":  "Manajemen User",
+  Laporan:           "Laporan Produksi",
+  "Bahan Masuk":     "Input Bahan Masuk",
+  Cutting:           "Input Hasil Cutting",
+  Jahit:             "Input Hasil Jahit",
+  Finishing:         "Input Hasil Finishing",
+  Pengiriman:        "Input Data Pengiriman",
 };
 
 const navByRole = {
-  admin:      ["Dashboard", "Pesanan Masuk", "Laporan"],
+  admin:      ["Dashboard", "Pesanan Masuk", "Manajemen User", "Laporan"], // ← tambah
   bahan:      ["Dashboard", "Bahan Masuk"],
   cutting:    ["Dashboard", "Cutting"],
   jahit:      ["Dashboard", "Jahit"],
@@ -38,20 +40,16 @@ export default function Dashboard({ user, initialPage = "Dashboard", onLogout, d
   const currentRole = dashboardRole || user?.role || "cutting";
   const currentNav  = navByRole[currentRole] || ["Dashboard"];
 
-  const showToast = (message) => {
-    setToast(message);
-    window.setTimeout(() => setToast(""), 2200);
-  };
-
   const content = useMemo(() => {
-    if (activePage === "Dashboard")     return <DashboardPage user={user} />;
-    if (activePage === "Pesanan Masuk") return <PesananMasuk />;
-    if (activePage === "Laporan")       return <ReportPage />;
-    if (activePage === "Bahan Masuk")   return <BahanMasuk />;
-    if (activePage === "Cutting")       return <Cutting />;
-    if (activePage === "Jahit")         return <Jahit />;
-    if (activePage === "Finishing")     return <Finishing />;
-    if (activePage === "Pengiriman")    return <Pengiriman />;
+    if (activePage === "Dashboard")        return <DashboardPage user={user} />;
+    if (activePage === "Pesanan Masuk")    return <PesananMasuk />;
+    if (activePage === "Manajemen User")   return <ManajemenUser />;
+    if (activePage === "Laporan")          return <ReportPage />;
+    if (activePage === "Bahan Masuk")      return <BahanMasuk />;
+    if (activePage === "Cutting")          return <Cutting />;
+    if (activePage === "Jahit")            return <Jahit />;
+    if (activePage === "Finishing")        return <Finishing />;
+    if (activePage === "Pengiriman")       return <Pengiriman />;
     return <DashboardPage user={user} />;
   }, [activePage, user]);
 

@@ -1,50 +1,19 @@
-import { useState } from "react";
 import { Link } from "react-router-dom";
 import AuthSplitLayout from "../components/AuthSplitLayout";
 
 export default function RegisterPage({ onRegister, loading, error, success }) {
-  const [selectedRole, setSelectedRole] = useState("");
-
-  const roleOptions = [
-    { value: "admin", label: "Admin" },
-    { value: "karyawan", label: "Karyawan" },
-    { value: "customer", label: "Customer" },
-  ];
-
   return (
     <AuthSplitLayout
-      title="Create Account"
-      subtitle="Daftar akun baru untuk mengakses sistem"
+      title="Daftar Akun"
+      subtitle="Buat akun customer untuk memesan produksi"
     >
       <form onSubmit={onRegister} className="space-y-4">
-        
-        {/* Pilihan Role */}
-        <div className="space-y-1.5">
-          <span className="text-sm font-medium text-slate-800">Daftar sebagai</span>
-          <div className="flex gap-2">
-            {roleOptions.map((r) => (
-              <button
-                key={r.value}
-                type="button"
-                onClick={() => setSelectedRole(r.value)}
-                className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition
-                  ${
-                    selectedRole === r.value
-                      ? "border-pink-500 bg-pink-50 text-pink-600"
-                      : "border-[#E5E7EB] text-slate-600 hover:border-pink-300"
-                  }`}
-              >
-                {r.label}
-              </button>
-            ))}
-          </div>
-          {/* Hidden input biar keikirim ke backend form */}
-          <input type="hidden" name="role" value={selectedRole} />
-        </div>
+        {/* Role otomatis customer */}
+        <input type="hidden" name="role" value="customer" />
 
         <Field label="Email" name="email" type="email" placeholder="nama@gmail.com" />
         <Field label="Password" name="password" type="password" placeholder="••••••••" />
-        <Field label="Confirm Password" name="confirmPassword" type="password" placeholder="••••••••" />
+        <Field label="Konfirmasi Password" name="confirmPassword" type="password" placeholder="••••••••" />
 
         {error && (
           <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -58,10 +27,10 @@ export default function RegisterPage({ onRegister, loading, error, success }) {
         )}
 
         <button
-          disabled={loading || !selectedRole}
+          disabled={loading}
           className="w-full rounded-full bg-gradient-to-r from-pink-500 to-rose-500 px-5 py-2.5 font-semibold text-white shadow-md transition hover:from-pink-600 hover:to-rose-600 hover:shadow-lg disabled:opacity-60"
         >
-          {loading ? "Mendaftarkan..." : "Register"}
+          {loading ? "Mendaftarkan..." : "Daftar Sekarang"}
         </button>
       </form>
 
