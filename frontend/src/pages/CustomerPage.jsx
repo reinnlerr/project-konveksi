@@ -3,24 +3,29 @@ import { useEffect, useState } from "react";
 const API_URL = "http://localhost/project-konveksi/Backend";
 
 const statusColor = {
-  pending:    "bg-yellow-100 text-yellow-700",
-  bahan:      "bg-blue-100 text-blue-700",
-  cutting:    "bg-purple-100 text-purple-700",
-  jahit:      "bg-pink-100 text-pink-700",
-  finishing:  "bg-orange-100 text-orange-700",
-  pengiriman: "bg-teal-100 text-teal-700",
-  selesai:    "bg-green-100 text-green-700",
+  pending:          "bg-yellow-100 text-yellow-700",
+  bahan:            "bg-blue-100 text-blue-700",
+  cutting:          "bg-purple-100 text-purple-700",
+  jahit:            "bg-pink-100 text-pink-700",
+  finishing:        "bg-orange-100 text-orange-700",
+  menunggu_revisi:  "bg-red-100 text-red-700",
+  pengiriman:       "bg-teal-100 text-teal-700",
+  selesai:          "bg-green-100 text-green-700",
 };
 
 const statusLabel = {
-  pending:    "Menunggu",
-  bahan:      "Bahan Masuk",
-  cutting:    "Cutting",
-  jahit:      "Jahit",
-  finishing:  "Finishing",
-  pengiriman: "Pengiriman",
-  selesai:    "Selesai",
+  pending:          "Menunggu",
+  bahan:            "Bahan Masuk",
+  cutting:          "Cutting",
+  jahit:            "Jahit",
+  finishing:        "Finishing",
+  menunggu_revisi:  "Perlu Revisi",
+  pengiriman:       "Pengiriman",
+  selesai:          "Selesai",
 };
+
+// Progress bar hanya untuk status alur normal (tidak termasuk menunggu_revisi)
+const progressStatus = ["pending", "bahan", "cutting", "jahit", "finishing", "pengiriman", "selesai"];
 
 export default function CustomerPage({ user, onLogout }) {
   const [orders, setOrders]       = useState([]);
@@ -28,6 +33,12 @@ export default function CustomerPage({ user, onLogout }) {
   const [error, setError]         = useState("");
   const [success, setSuccess]     = useState("");
   const [activePage, setActivePage] = useState("order");
+
+  // State untuk form revisi
+  const [alasanRevisi, setAlasanRevisi] = useState({});
+  const [submittingRevisi, setSubmittingRevisi] = useState(null);
+  const [revisiError, setRevisiError]   = useState({});
+  const [revisiSuccess, setRevisiSuccess] = useState({});
 
   const [form, setForm] = useState({
     jenis_baju: "",
@@ -52,6 +63,9 @@ export default function CustomerPage({ user, onLogout }) {
 
   useEffect(() => { fetchOrders(); }, []);
 
+  // Hitung order yang butuh revisi untuk badge notif
+  const revisiCount = orders.filter(o => o.status === "menunggu_revisi").length;
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -62,9 +76,7 @@ export default function CustomerPage({ user, onLogout }) {
       return;
     }
 
-    // INI YANG TADI ERROR, UDAH DIGANTI JADI setLoading(true);
     setLoading(true);
-    
     try {
       const res  = await fetch(`${API_URL}/orders.php`, {
         method: "POST",
@@ -86,6 +98,39 @@ export default function CustomerPage({ user, onLogout }) {
       setError("Gagal terhubung ke server.");
     }
     setLoading(false);
+  };
+
+  const handleSubmitRevisi = async (id_order) => {
+    const alasan = (alasanRevisi[id_order] || "").trim();
+    if (!alasan) {
+      setRevisiError(prev => ({ ...prev, [id_order]: "Alasan revisi wajib diisi." }));
+      return;
+    }
+
+    setSubmittingRevisi(id_order);
+    setRevisiError(prev => ({ ...prev, [id_order]: "" }));
+
+    try {
+      const res  = await fetch(`${API_URL}/revisi.php`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ id_order, alasan }),
+      });
+      const data = await res.json();
+      if (data.status === "success") {
+        setRevisiSuccess(prev => ({ ...prev, [id_order]: data.message }));
+        setAlasanRevisi(prev => ({ ...prev, [id_order]: "" }));
+        fetchOrders();
+      } else {
+        setRevisiError(prev => ({ ...prev, [id_order]: data.message }));
+      }
+    } catch {
+      setRevisiError(prev => ({ ...prev, [id_order]: "Gagal terhubung ke server." }));
+    }
+    setSubmittingRevisi(null);
   };
 
   return (
@@ -112,6 +157,11 @@ export default function CustomerPage({ user, onLogout }) {
             ${activePage === "status" ? "bg-pink-500 text-white" : "text-gray-400 hover:text-white hover:bg-gray-800"}`}
         >
           📦 Status Pesanan
+          {revisiCount > 0 && (
+            <span className="ml-auto bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+              {revisiCount}
+            </span>
+          )}
         </button>
 
         <div className="mt-auto">
@@ -153,7 +203,6 @@ export default function CustomerPage({ user, onLogout }) {
           <div className="bg-white rounded-2xl border border-gray-100 p-6 max-w-xl shadow-sm">
             <h3 className="text-base font-semibold text-gray-700 mb-4">Form Pesanan Baru</h3>
             <form onSubmit={handleSubmit} className="space-y-4">
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Jenis Baju</label>
                 <input
@@ -214,40 +263,86 @@ export default function CustomerPage({ user, onLogout }) {
         {/* Status Pesanan */}
         {activePage === "status" && (
           <div className="space-y-4">
+
+            {/* Banner notif kalau ada yang perlu revisi */}
+            {revisiCount > 0 && (
+              <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-center gap-3">
+                <span className="text-2xl">⚠️</span>
+                <div>
+                  <p className="font-semibold text-red-700">Ada {revisiCount} pesanan yang perlu direvisi!</p>
+                  <p className="text-sm text-red-500">Tim produksi meminta klarifikasi. Scroll ke bawah dan isi alasan revisi.</p>
+                </div>
+              </div>
+            )}
+
             {orders.length === 0 ? (
               <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center text-gray-400">
                 Belum ada pesanan. Buat order dulu!
               </div>
             ) : (
               orders.map((order) => (
-                <div key={order.id_order} className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+                <div key={order.id_order} className={`bg-white rounded-2xl border p-5 shadow-sm ${order.status === "menunggu_revisi" ? "border-red-300" : "border-gray-100"}`}>
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="font-semibold text-gray-800">{order.jenis_baju}</p>
                       <p className="text-sm text-gray-500 mt-1">{order.jumlah} pcs · Deadline: {order.deadline}</p>
                       {order.catatan && <p className="text-sm text-gray-400 mt-1">📝 {order.catatan}</p>}
                     </div>
-                    <span className={`text-xs font-medium px-3 py-1 rounded-full ${statusColor[order.status]}`}>
-                      {statusLabel[order.status]}
+                    <span className={`text-xs font-medium px-3 py-1 rounded-full ${statusColor[order.status] || "bg-gray-100 text-gray-600"}`}>
+                      {statusLabel[order.status] || order.status}
                     </span>
                   </div>
 
-                  {/* Progress bar status */}
-                  <div className="mt-4">
-                    <div className="flex justify-between text-xs text-gray-400 mb-1">
-                      {Object.values(statusLabel).map((s) => (
-                        <span key={s}>{s}</span>
-                      ))}
+                  {/* Progress bar — hanya untuk status normal */}
+                  {order.status !== "menunggu_revisi" && (
+                    <div className="mt-4">
+                      <div className="flex justify-between text-xs text-gray-400 mb-1">
+                        {progressStatus.map(s => (
+                          <span key={s}>{statusLabel[s]}</span>
+                        ))}
+                      </div>
+                      <div className="w-full bg-gray-100 rounded-full h-1.5">
+                        <div
+                          className="bg-gradient-to-r from-pink-500 to-rose-500 h-1.5 rounded-full transition-all"
+                          style={{
+                            width: `${(progressStatus.indexOf(order.status) + 1) / progressStatus.length * 100}%`
+                          }}
+                        />
+                      </div>
                     </div>
-                    <div className="w-full bg-gray-100 rounded-full h-1.5">
-                      <div
-                        className="bg-gradient-to-r from-pink-500 to-rose-500 h-1.5 rounded-full transition-all"
-                        style={{
-                          width: `${(Object.keys(statusLabel).indexOf(order.status) + 1) / Object.keys(statusLabel).length * 100}%`
-                        }}
+                  )}
+
+                  {/* Form input alasan revisi */}
+                  {order.status === "menunggu_revisi" && (
+                    <div className="mt-4 bg-red-50 border border-red-200 rounded-xl p-4 space-y-3">
+                      <p className="text-sm font-semibold text-red-700">
+                        🔄 Tim produksi meminta revisi pada pesanan ini.
+                      </p>
+                      <p className="text-xs text-red-500">
+                        Jelaskan detail perubahan atau klarifikasi yang kamu inginkan. Setelah dikirim, pesanan akan kembali ke proses jahit.
+                      </p>
+                      <textarea
+                        placeholder="Contoh: Tolong ubah warna menjadi hitam, ukuran M saja..."
+                        value={alasanRevisi[order.id_order] || ""}
+                        onChange={e => setAlasanRevisi(prev => ({ ...prev, [order.id_order]: e.target.value }))}
+                        rows={3}
+                        className="w-full rounded-lg border border-red-200 px-3 py-2 text-sm outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100 resize-none bg-white"
                       />
+                      {revisiError[order.id_order] && (
+                        <p className="text-xs text-red-600">{revisiError[order.id_order]}</p>
+                      )}
+                      {revisiSuccess[order.id_order] && (
+                        <p className="text-xs text-green-600">{revisiSuccess[order.id_order]}</p>
+                      )}
+                      <button
+                        onClick={() => handleSubmitRevisi(order.id_order)}
+                        disabled={submittingRevisi === order.id_order}
+                        className="rounded-xl bg-gradient-to-r from-red-500 to-rose-500 px-4 py-2 text-sm font-semibold text-white hover:from-red-600 hover:to-rose-600 disabled:opacity-60 transition"
+                      >
+                        {submittingRevisi === order.id_order ? "Mengirim..." : "📨 Kirim Alasan Revisi"}
+                      </button>
                     </div>
-                  </div>
+                  )}
                 </div>
               ))
             )}

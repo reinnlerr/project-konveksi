@@ -6,6 +6,7 @@ import Dashboard from "./pages/Dashboard";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import CustomerPage from "./pages/CustomerPage";
+import RoleSelectionPage from "./pages/RoleSelectionPage";
 
 function App() {
   const navigate = useNavigate();
@@ -52,6 +53,8 @@ function App() {
       navigate("/dashboard");
     } else if (result.user.role === "customer") {
       navigate("/customer");
+    } else if (result.user.role === "karyawan") {
+      navigate("/select-role");
     } else if (["bahan", "cutting", "jahit", "finishing", "pengiriman"].includes(result.user.role)) {
       navigate(`/role/${result.user.role}`);
     } else {
@@ -59,6 +62,11 @@ function App() {
       setLoginSuccess("");
       logout();
     }
+  };
+
+  const handleSelectRole = (selectedRole) => {
+    localStorage.setItem("dashboardRole", selectedRole);
+    navigate(`/role/${selectedRole}`);
   };
 
   const handleRegister = async (e) => {
@@ -114,7 +122,7 @@ function App() {
   };
 
   const isKaryawan = Boolean(user) &&
-    ["bahan", "cutting", "jahit", "finishing", "pengiriman"].includes(user?.role);
+    (user?.role === "karyawan" || ["bahan", "cutting", "jahit", "finishing", "pengiriman"].includes(user?.role));
 
   return (
     <Routes>
@@ -136,6 +144,13 @@ function App() {
         element={
           <ProtectedRoute isAllowed={Boolean(user) && user?.role === "customer"}>
             <CustomerPage user={user} onLogout={handleLogout} />
+          </ProtectedRoute>
+        }
+      />
+      <Route path="/select-role"
+        element={
+          <ProtectedRoute isAllowed={Boolean(user) && user?.role === "karyawan"}>
+            <RoleSelectionPage onSelectRole={handleSelectRole} onLogout={handleLogout} />
           </ProtectedRoute>
         }
       />
