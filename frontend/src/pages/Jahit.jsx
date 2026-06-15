@@ -80,20 +80,49 @@ export default function Jahit() {
         ) : (
           <div className="space-y-3">
             {tasks.map((task) => (
-              <div key={task.id_batch} className="flex items-center justify-between rounded-xl border border-slate-200 p-4 hover:border-pink-300 hover:bg-pink-50/20 transition">
-                <div>
-                  <p className="font-semibold text-slate-800">{task.nama_batch}</p>
-                  <p className="text-sm text-slate-600">{task.jenis_baju} · <span className="font-medium">{task.jumlah} pcs</span></p>
-                  <p className="text-xs text-slate-400">Deadline: {task.deadline}</p>
-                  {task.catatan && <p className="text-xs text-slate-400 mt-0.5">📝 {task.catatan}</p>}
+              <div key={task.id_batch} className={`rounded-xl border p-4 transition ${
+                task.alasan_revisi
+                  ? "border-orange-300 bg-orange-50/30"
+                  : "border-slate-200 hover:border-pink-300 hover:bg-pink-50/20"
+              }`}>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="font-semibold text-slate-800">{task.nama_batch}</p>
+                      {/* Badge revisi */}
+                      {task.jumlah_revisi > 0 && (
+                        <span className="rounded-full bg-orange-100 text-orange-600 px-2 py-0.5 text-xs font-medium">
+                          🔄 Revisi ke-{task.jumlah_revisi}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm text-slate-600">
+                      {task.jenis_baju} · <span className="font-medium">{task.jumlah} pcs</span>
+                    </p>
+                    <p className="text-xs text-slate-400">Deadline: {task.deadline}</p>
+                    {task.catatan && (
+                      <p className="text-xs text-slate-400 mt-0.5">📝 {task.catatan}</p>
+                    )}
+
+                    {/* Alasan revisi dari customer */}
+                    {task.alasan_revisi && (
+                      <div className="mt-3 bg-orange-100 border border-orange-200 rounded-lg px-3 py-2">
+                        <p className="text-xs font-semibold text-orange-700 mb-1">
+                          💬 Permintaan Revisi dari Customer:
+                        </p>
+                        <p className="text-sm text-orange-800">{task.alasan_revisi}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={() => handleQuickProcess(task)}
+                    disabled={processingId === task.id_batch}
+                    className="shrink-0 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 px-4 py-2 text-sm font-semibold text-white hover:from-pink-600 hover:to-rose-600 disabled:opacity-60 transition whitespace-nowrap"
+                  >
+                    {processingId === task.id_batch ? "Memproses..." : "✅ Proses"}
+                  </button>
                 </div>
-                <button
-                  onClick={() => handleQuickProcess(task)}
-                  disabled={processingId === task.id_batch}
-                  className="ml-4 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 px-4 py-2 text-sm font-semibold text-white hover:from-pink-600 hover:to-rose-600 disabled:opacity-60 transition whitespace-nowrap"
-                >
-                  {processingId === task.id_batch ? "Memproses..." : "✅ Proses"}
-                </button>
               </div>
             ))}
           </div>

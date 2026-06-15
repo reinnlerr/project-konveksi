@@ -31,10 +31,9 @@ export default function Finishing() {
 
   useEffect(() => { fetchHistory(); fetchTasks(); }, []);
 
-  const handleQuickProcess = async (task, status) => {
-    setProcessingId(`${task.id_batch}-${status}`);
+  const handleQuickProcess = async (task) => {
+    setProcessingId(task.id_batch);
     const today = new Date().toISOString().split("T")[0];
-    const newOrderStatus = status === "Selesai" ? "pengiriman" : "menunggu_revisi";
 
     try {
       const res = await fetch(`${API_URL}/finishing.php`, {
@@ -43,7 +42,7 @@ export default function Finishing() {
         body: JSON.stringify({
           id_batch:     task.id_batch,
           jumlah_hasil: task.jumlah,
-          status:       status,
+          status:       "Selesai",
           id_user:      user?.id_user,
           tanggal:      today,
         }),
@@ -53,7 +52,7 @@ export default function Finishing() {
         await fetch(`${API_URL}/orders.php`, {
           method: "PUT",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ id_batch: task.id_batch, new_status: newOrderStatus }),
+          body: JSON.stringify({ id_batch: task.id_batch, new_status: "finishing" }),
         });
         fetchHistory();
         fetchTasks();
@@ -83,29 +82,20 @@ export default function Finishing() {
         ) : (
           <div className="space-y-3">
             {tasks.map((task) => (
-              <div key={task.id_batch} className="rounded-xl border border-slate-200 p-4 hover:border-pink-300 transition">
-                <div className="mb-3">
+              <div key={task.id_batch} className="flex items-center justify-between rounded-xl border border-slate-200 p-4 hover:border-pink-300 hover:bg-pink-50/20 transition">
+                <div>
                   <p className="font-semibold text-slate-800">{task.nama_batch}</p>
                   <p className="text-sm text-slate-600">{task.jenis_baju} · <span className="font-medium">{task.jumlah} pcs</span></p>
                   <p className="text-xs text-slate-400">Deadline: {task.deadline}</p>
                   {task.catatan && <p className="text-xs text-slate-400 mt-0.5">📝 {task.catatan}</p>}
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleQuickProcess(task, "Selesai")}
-                    disabled={!!processingId}
-                    className="flex-1 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 px-3 py-2 text-sm font-semibold text-white hover:from-green-600 hover:to-emerald-600 disabled:opacity-60 transition"
-                  >
-                    {processingId === `${task.id_batch}-Selesai` ? "Memproses..." : "✅ Selesai"}
-                  </button>
-                  <button
-                    onClick={() => handleQuickProcess(task, "Revisi")}
-                    disabled={!!processingId}
-                    className="flex-1 rounded-xl bg-gradient-to-r from-orange-400 to-red-400 px-3 py-2 text-sm font-semibold text-white hover:from-orange-500 hover:to-red-500 disabled:opacity-60 transition"
-                  >
-                    {processingId === `${task.id_batch}-Revisi` ? "Memproses..." : "🔄 Minta Revisi"}
-                  </button>
-                </div>
+                <button
+                  onClick={() => handleQuickProcess(task)}
+                  disabled={processingId === task.id_batch}
+                  className="ml-4 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 px-4 py-2 text-sm font-semibold text-white hover:from-green-600 hover:to-emerald-600 disabled:opacity-60 transition whitespace-nowrap"
+                >
+                  {processingId === task.id_batch ? "Memproses..." : "✅ Selesai"}
+                </button>
               </div>
             ))}
           </div>
@@ -124,7 +114,6 @@ export default function Finishing() {
                 <tr>
                   <th className="py-2 pr-4 font-semibold">Batch</th>
                   <th className="py-2 pr-4 font-semibold">Jumlah</th>
-                  <th className="py-2 pr-4 font-semibold">Status</th>
                   <th className="py-2 pr-4 font-semibold">Tanggal</th>
                   <th className="py-2 font-semibold">Operator</th>
                 </tr>
@@ -134,15 +123,6 @@ export default function Finishing() {
                   <tr key={row.id_finishing} className="border-b border-slate-100 hover:bg-slate-50">
                     <td className="py-2 pr-4">{row.nama_batch}</td>
                     <td className="py-2 pr-4">{row.jumlah_hasil} pcs</td>
-                    <td className="py-2 pr-4">
-                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                        row.status?.toLowerCase() === "revisi"
-                          ? "bg-red-100 text-red-600"
-                          : "bg-green-100 text-green-600"
-                      }`}>
-                        {row.status || "-"}
-                      </span>
-                    </td>
                     <td className="py-2 pr-4">{row.tanggal}</td>
                     <td className="py-2 text-slate-400 text-xs">{row.nama_user}</td>
                   </tr>

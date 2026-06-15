@@ -60,15 +60,20 @@ switch ($role) {
         break;
 
     case 'jahit':
-        $result = mysqli_query($koneksi, "
-            SELECT o.id_order, o.jenis_baju, o.jumlah, o.deadline, o.catatan,
-                   b.id_batch, b.nama_batch
-            FROM orders o
-            INNER JOIN batch b ON o.id_batch = b.id_batch
-            WHERE o.status = 'jahit'
-            ORDER BY o.deadline ASC
-        ");
-        break;
+    $result = mysqli_query($koneksi, "
+        SELECT o.id_order, o.jenis_baju, o.jumlah, o.deadline, o.catatan,
+               b.id_batch, b.nama_batch,
+               (SELECT r.alasan FROM revisi_log r 
+                WHERE r.id_order = o.id_order 
+                ORDER BY r.created_at DESC LIMIT 1) as alasan_revisi,
+               (SELECT COUNT(*) FROM revisi_log r 
+                WHERE r.id_order = o.id_order) as jumlah_revisi
+        FROM orders o
+        INNER JOIN batch b ON o.id_batch = b.id_batch
+        WHERE o.status = 'jahit'
+        ORDER BY o.deadline ASC
+    ");
+    break;
 
     case 'finishing':
         $result = mysqli_query($koneksi, "

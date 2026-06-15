@@ -3,28 +3,25 @@ import { useEffect, useState } from "react";
 const API_URL = "http://localhost/project-konveksi/Backend";
 
 const statusColor = {
-  pending:          "bg-yellow-100 text-yellow-700",
-  bahan:            "bg-blue-100 text-blue-700",
-  cutting:          "bg-purple-100 text-purple-700",
-  jahit:            "bg-pink-100 text-pink-700",
-  finishing:        "bg-orange-100 text-orange-700",
-  menunggu_revisi:  "bg-red-100 text-red-700",
-  pengiriman:       "bg-teal-100 text-teal-700",
-  selesai:          "bg-green-100 text-green-700",
+  pending:         "bg-yellow-100 text-yellow-700",
+  bahan:           "bg-blue-100 text-blue-700",
+  cutting:         "bg-purple-100 text-purple-700",
+  jahit:           "bg-pink-100 text-pink-700",
+  finishing:       "bg-orange-100 text-orange-700",
+  pengiriman:      "bg-teal-100 text-teal-700",
+  selesai:         "bg-green-100 text-green-700",
 };
 
 const statusLabel = {
-  pending:          "Menunggu",
-  bahan:            "Bahan Masuk",
-  cutting:          "Cutting",
-  jahit:            "Jahit",
-  finishing:        "Finishing",
-  menunggu_revisi:  "Perlu Revisi",
-  pengiriman:       "Pengiriman",
-  selesai:          "Selesai",
+  pending:         "Menunggu",
+  bahan:           "Bahan Masuk",
+  cutting:         "Cutting",
+  jahit:           "Jahit",
+  finishing:       "Finishing",
+  pengiriman:      "Pengiriman",
+  selesai:         "Selesai",
 };
 
-// Progress bar hanya untuk status alur normal (tidak termasuk menunggu_revisi)
 const progressStatus = ["pending", "bahan", "cutting", "jahit", "finishing", "pengiriman", "selesai"];
 
 export default function CustomerPage({ user, onLogout }) {
@@ -34,17 +31,14 @@ export default function CustomerPage({ user, onLogout }) {
   const [success, setSuccess]     = useState("");
   const [activePage, setActivePage] = useState("order");
 
-  // State untuk form revisi
-  const [alasanRevisi, setAlasanRevisi] = useState({});
+  const [alasanRevisi, setAlasanRevisi]       = useState({});
   const [submittingRevisi, setSubmittingRevisi] = useState(null);
-  const [revisiError, setRevisiError]   = useState({});
-  const [revisiSuccess, setRevisiSuccess] = useState({});
+  const [revisiError, setRevisiError]         = useState({});
+  const [revisiSuccess, setRevisiSuccess]     = useState({});
+  const [showRevisiForm, setShowRevisiForm]   = useState({});
 
   const [form, setForm] = useState({
-    jenis_baju: "",
-    jumlah: "",
-    deadline: "",
-    catatan: "",
+    jenis_baju: "", jumlah: "", deadline: "", catatan: "",
   });
 
   const token = localStorage.getItem("token");
@@ -56,34 +50,24 @@ export default function CustomerPage({ user, onLogout }) {
       });
       const data = await res.json();
       if (data.status === "success") setOrders(data.data);
-    } catch {
-      console.error("Gagal fetch orders");
-    }
+    } catch { console.error("Gagal fetch orders"); }
   };
 
   useEffect(() => { fetchOrders(); }, []);
 
-  // Hitung order yang butuh revisi untuk badge notif
-  const revisiCount = orders.filter(o => o.status === "menunggu_revisi").length;
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
-    setSuccess("");
+    setError(""); setSuccess("");
 
     if (!form.jenis_baju || !form.jumlah || !form.deadline) {
-      setError("Semua field wajib diisi.");
-      return;
+      setError("Semua field wajib diisi."); return;
     }
 
     setLoading(true);
     try {
       const res  = await fetch(`${API_URL}/orders.php`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(form),
       });
       const data = await res.json();
@@ -94,9 +78,7 @@ export default function CustomerPage({ user, onLogout }) {
       } else {
         setError(data.message);
       }
-    } catch {
-      setError("Gagal terhubung ke server.");
-    }
+    } catch { setError("Gagal terhubung ke server."); }
     setLoading(false);
   };
 
@@ -113,16 +95,14 @@ export default function CustomerPage({ user, onLogout }) {
     try {
       const res  = await fetch(`${API_URL}/revisi.php`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ id_order, alasan }),
       });
       const data = await res.json();
       if (data.status === "success") {
-        setRevisiSuccess(prev => ({ ...prev, [id_order]: data.message }));
+        setRevisiSuccess(prev => ({ ...prev, [id_order]: "Revisi berhasil dikirim! Pesanan kembali ke proses jahit." }));
         setAlasanRevisi(prev => ({ ...prev, [id_order]: "" }));
+        setShowRevisiForm(prev => ({ ...prev, [id_order]: false }));
         fetchOrders();
       } else {
         setRevisiError(prev => ({ ...prev, [id_order]: data.message }));
@@ -157,11 +137,6 @@ export default function CustomerPage({ user, onLogout }) {
             ${activePage === "status" ? "bg-pink-500 text-white" : "text-gray-400 hover:text-white hover:bg-gray-800"}`}
         >
           📦 Status Pesanan
-          {revisiCount > 0 && (
-            <span className="ml-auto bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-              {revisiCount}
-            </span>
-          )}
         </button>
 
         <div className="mt-auto">
@@ -205,53 +180,34 @@ export default function CustomerPage({ user, onLogout }) {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Jenis Baju</label>
-                <input
-                  type="text"
-                  placeholder="Contoh: Kaos polos, Kemeja, dll"
-                  value={form.jenis_baju}
-                  onChange={e => setForm({...form, jenis_baju: e.target.value})}
+                <input type="text" placeholder="Contoh: Kaos polos, Kemeja, dll"
+                  value={form.jenis_baju} onChange={e => setForm({...form, jenis_baju: e.target.value})}
                   className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-pink-400 focus:ring-2 focus:ring-pink-100"
                 />
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Jumlah (pcs)</label>
-                <input
-                  type="number"
-                  placeholder="Contoh: 100"
-                  min="1"
-                  value={form.jumlah}
-                  onChange={e => setForm({...form, jumlah: e.target.value})}
+                <input type="number" placeholder="Contoh: 100" min="1"
+                  value={form.jumlah} onChange={e => setForm({...form, jumlah: e.target.value})}
                   className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-pink-400 focus:ring-2 focus:ring-pink-100"
                 />
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Deadline</label>
-                <input
-                  type="date"
-                  value={form.deadline}
-                  onChange={e => setForm({...form, deadline: e.target.value})}
+                <input type="date" value={form.deadline} onChange={e => setForm({...form, deadline: e.target.value})}
                   className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-pink-400 focus:ring-2 focus:ring-pink-100"
                 />
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Catatan (opsional)</label>
-                <textarea
-                  placeholder="Warna, ukuran, atau detail lainnya..."
-                  value={form.catatan}
-                  onChange={e => setForm({...form, catatan: e.target.value})}
-                  rows={3}
-                  className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-pink-400 focus:ring-2 focus:ring-pink-100 resize-none"
+                <textarea placeholder="Warna, ukuran, atau detail lainnya..."
+                  value={form.catatan} onChange={e => setForm({...form, catatan: e.target.value})}
+                  rows={3} className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-pink-400 focus:ring-2 focus:ring-pink-100 resize-none"
                 />
               </div>
-
-              {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
+              {error   && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
               {success && <p className="text-sm text-green-600 bg-green-50 border border-green-200 rounded-lg px-3 py-2">{success}</p>}
-
-              <button
-                disabled={loading}
+              <button disabled={loading}
                 className="w-full rounded-full bg-gradient-to-r from-pink-500 to-rose-500 px-5 py-2.5 font-semibold text-white transition hover:from-pink-600 hover:to-rose-600 disabled:opacity-60"
               >
                 {loading ? "Mengirim..." : "Buat Order"}
@@ -263,25 +219,13 @@ export default function CustomerPage({ user, onLogout }) {
         {/* Status Pesanan */}
         {activePage === "status" && (
           <div className="space-y-4">
-
-            {/* Banner notif kalau ada yang perlu revisi */}
-            {revisiCount > 0 && (
-              <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-center gap-3">
-                <span className="text-2xl">⚠️</span>
-                <div>
-                  <p className="font-semibold text-red-700">Ada {revisiCount} pesanan yang perlu direvisi!</p>
-                  <p className="text-sm text-red-500">Tim produksi meminta klarifikasi. Scroll ke bawah dan isi alasan revisi.</p>
-                </div>
-              </div>
-            )}
-
             {orders.length === 0 ? (
               <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center text-gray-400">
                 Belum ada pesanan. Buat order dulu!
               </div>
             ) : (
               orders.map((order) => (
-                <div key={order.id_order} className={`bg-white rounded-2xl border p-5 shadow-sm ${order.status === "menunggu_revisi" ? "border-red-300" : "border-gray-100"}`}>
+                <div key={order.id_order} className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="font-semibold text-gray-800">{order.jenis_baju}</p>
@@ -293,54 +237,70 @@ export default function CustomerPage({ user, onLogout }) {
                     </span>
                   </div>
 
-                  {/* Progress bar — hanya untuk status normal */}
-                  {order.status !== "menunggu_revisi" && (
-                    <div className="mt-4">
-                      <div className="flex justify-between text-xs text-gray-400 mb-1">
-                        {progressStatus.map(s => (
-                          <span key={s}>{statusLabel[s]}</span>
-                        ))}
-                      </div>
-                      <div className="w-full bg-gray-100 rounded-full h-1.5">
-                        <div
-                          className="bg-gradient-to-r from-pink-500 to-rose-500 h-1.5 rounded-full transition-all"
-                          style={{
-                            width: `${(progressStatus.indexOf(order.status) + 1) / progressStatus.length * 100}%`
-                          }}
-                        />
-                      </div>
+                  {/* Progress bar */}
+                  <div className="mt-4">
+                    <div className="flex justify-between text-xs text-gray-400 mb-1">
+                      {progressStatus.map(s => (
+                        <span key={s}>{statusLabel[s]}</span>
+                      ))}
                     </div>
-                  )}
-
-                  {/* Form input alasan revisi */}
-                  {order.status === "menunggu_revisi" && (
-                    <div className="mt-4 bg-red-50 border border-red-200 rounded-xl p-4 space-y-3">
-                      <p className="text-sm font-semibold text-red-700">
-                        🔄 Tim produksi meminta revisi pada pesanan ini.
-                      </p>
-                      <p className="text-xs text-red-500">
-                        Jelaskan detail perubahan atau klarifikasi yang kamu inginkan. Setelah dikirim, pesanan akan kembali ke proses jahit.
-                      </p>
-                      <textarea
-                        placeholder="Contoh: Tolong ubah warna menjadi hitam, ukuran M saja..."
-                        value={alasanRevisi[order.id_order] || ""}
-                        onChange={e => setAlasanRevisi(prev => ({ ...prev, [order.id_order]: e.target.value }))}
-                        rows={3}
-                        className="w-full rounded-lg border border-red-200 px-3 py-2 text-sm outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100 resize-none bg-white"
+                    <div className="w-full bg-gray-100 rounded-full h-1.5">
+                      <div
+                        className="bg-gradient-to-r from-pink-500 to-rose-500 h-1.5 rounded-full transition-all"
+                        style={{
+                          width: `${(progressStatus.indexOf(order.status) + 1) / progressStatus.length * 100}%`
+                        }}
                       />
-                      {revisiError[order.id_order] && (
-                        <p className="text-xs text-red-600">{revisiError[order.id_order]}</p>
+                    </div>
+                  </div>
+
+                  {/* Tombol & form minta revisi — hanya muncul saat status finishing */}
+                  {order.status === "finishing" && (
+                    <div className="mt-4">
+                      {revisiSuccess[order.id_order] ? (
+                        <p className="text-sm text-green-600 bg-green-50 border border-green-200 rounded-xl px-3 py-2">
+                          ✅ {revisiSuccess[order.id_order]}
+                        </p>
+                      ) : !showRevisiForm[order.id_order] ? (
+                        <button
+                          onClick={() => setShowRevisiForm(prev => ({ ...prev, [order.id_order]: true }))}
+                          className="text-sm text-orange-600 border border-orange-200 bg-orange-50 hover:bg-orange-100 rounded-xl px-4 py-2 transition font-medium"
+                        >
+                          🔄 Minta Revisi
+                        </button>
+                      ) : (
+                        <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 space-y-3">
+                          <p className="text-sm font-semibold text-orange-700">Ajukan Permintaan Revisi</p>
+                          <p className="text-xs text-orange-500">
+                            Jelaskan detail perubahan yang kamu inginkan. Setelah dikirim, pesanan akan kembali ke proses jahit.
+                          </p>
+                          <textarea
+                            placeholder="Contoh: Tolong ubah warna menjadi hitam, ukuran M saja..."
+                            value={alasanRevisi[order.id_order] || ""}
+                            onChange={e => setAlasanRevisi(prev => ({ ...prev, [order.id_order]: e.target.value }))}
+                            rows={3}
+                            className="w-full rounded-lg border border-orange-200 px-3 py-2 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 resize-none bg-white"
+                          />
+                          {revisiError[order.id_order] && (
+                            <p className="text-xs text-red-600">{revisiError[order.id_order]}</p>
+                          )}
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleSubmitRevisi(order.id_order)}
+                              disabled={submittingRevisi === order.id_order}
+                              className="rounded-xl bg-gradient-to-r from-orange-500 to-red-500 px-4 py-2 text-sm font-semibold text-white hover:from-orange-600 hover:to-red-600 disabled:opacity-60 transition"
+                            >
+                              {submittingRevisi === order.id_order ? "Mengirim..." : "📨 Kirim Revisi"}
+                            </button>
+                            <button
+                              onClick={() => setShowRevisiForm(prev => ({ ...prev, [order.id_order]: false }))}
+                              className="rounded-xl border border-gray-200 px-4 py-2 text-sm text-gray-500 hover:bg-gray-50 transition"
+                            >
+                              Batal
+                            </button>
+                          </div>
+                        </div>
                       )}
-                      {revisiSuccess[order.id_order] && (
-                        <p className="text-xs text-green-600">{revisiSuccess[order.id_order]}</p>
-                      )}
-                      <button
-                        onClick={() => handleSubmitRevisi(order.id_order)}
-                        disabled={submittingRevisi === order.id_order}
-                        className="rounded-xl bg-gradient-to-r from-red-500 to-rose-500 px-4 py-2 text-sm font-semibold text-white hover:from-red-600 hover:to-rose-600 disabled:opacity-60 transition"
-                      >
-                        {submittingRevisi === order.id_order ? "Mengirim..." : "📨 Kirim Alasan Revisi"}
-                      </button>
                     </div>
                   )}
                 </div>

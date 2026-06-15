@@ -83,7 +83,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Pastikan order ini milik customer yang login & statusnya menunggu_revisi
     $cek = mysqli_prepare($koneksi, "
         SELECT id_order FROM orders
-        WHERE id_order = ? AND id_user = ? AND status = 'menunggu_revisi'
+        WHERE id_order = ? AND id_user = ? AND status = 'finishing'
     ");
     mysqli_stmt_bind_param($cek, "ii", $id_order, $user['id_user']);
     mysqli_stmt_execute($cek);
