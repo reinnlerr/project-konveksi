@@ -78,16 +78,19 @@ switch ($role) {
     ");
     break;
 
-    case 'finishing':
-        $result = mysqli_query($koneksi, "
-            SELECT o.id_order, o.jenis_baju, o.jumlah, o.deadline, o.catatan,
-                   b.id_batch, b.nama_batch
-            FROM orders o
-            INNER JOIN batch b ON o.id_batch = b.id_batch
-            WHERE o.status = 'finishing'
-            ORDER BY o.deadline ASC
-        ");
-        break;
+   case 'finishing':
+    $result = mysqli_query($koneksi, "
+        SELECT o.id_order, o.jenis_baju, o.jumlah, o.deadline, o.catatan,
+               b.id_batch, b.nama_batch
+        FROM orders o
+        INNER JOIN batch b ON o.id_batch = b.id_batch
+        WHERE o.status = 'finishing'
+          AND NOT EXISTS (
+              SELECT 1 FROM finishing f WHERE f.id_batch = b.id_batch
+          )
+        ORDER BY o.deadline ASC
+    ");
+    break;
 
     case 'pengiriman':
         $result = mysqli_query($koneksi, "
