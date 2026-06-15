@@ -6,6 +6,8 @@ export default function Finishing() {
   const [history, setHistory]           = useState([]);
   const [tasks, setTasks]               = useState([]);
   const [processingId, setProcessingId] = useState(null);
+  const [fotoFile, setFotoFile]         = useState({});
+  const [fotoPreview, setFotoPreview]   = useState({});
   const token = localStorage.getItem("token");
   const user  = JSON.parse(localStorage.getItem("currentUser") || "{}");
 
@@ -31,31 +33,50 @@ export default function Finishing() {
 
   useEffect(() => { fetchHistory(); fetchTasks(); }, []);
 
+  const handleFotoChange = (id_batch, file) => {
+    if (!file) return;
+    setFotoFile(prev => ({ ...prev, [id_batch]: file }));
+    setFotoPreview(prev => ({ ...prev, [id_batch]: URL.createObjectURL(file) }));
+  };
+
   const handleQuickProcess = async (task) => {
+    if (!fotoFile[task.id_batch]) {
+      alert("Upload foto hasil finishing dulu!");
+      return;
+    }
+
     setProcessingId(task.id_batch);
     const today = new Date().toISOString().split("T")[0];
+
+    // Pakai FormData karena ada file upload
+    const formData = new FormData();
+    formData.append("id_batch",     task.id_batch);
+    formData.append("jumlah_hasil", task.jumlah);
+    formData.append("id_user",      user?.id_user);
+    formData.append("tanggal",      today);
+    formData.append("foto",         fotoFile[task.id_batch]);
 
     try {
       const res = await fetch(`${API_URL}/finishing.php`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          id_batch:     task.id_batch,
-          jumlah_hasil: task.jumlah,
-          status:       "Selesai",
-          id_user:      user?.id_user,
-          tanggal:      today,
-        }),
+        headers: { Authorization: `Bearer ${token}` }, // ← JANGAN set Content-Type, biar browser auto-set boundary
+        body: formData,
       });
       const data = await res.json();
       if (data.status === "success") {
+        // Update status order ke finishing
         await fetch(`${API_URL}/orders.php`, {
           method: "PUT",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
           body: JSON.stringify({ id_batch: task.id_batch, new_status: "finishing" }),
         });
+        // Reset foto
+        setFotoFile(prev  => { const n = {...prev};  delete n[task.id_batch]; return n; });
+        setFotoPreview(prev => { const n = {...prev}; delete n[task.id_batch]; return n; });
         fetchHistory();
         fetchTasks();
+      } else {
+        alert("Gagal: " + data.message);
       }
     } catch { console.error("Quick process finishing gagal"); }
     setProcessingId(null);
@@ -82,19 +103,41 @@ export default function Finishing() {
         ) : (
           <div className="space-y-3">
             {tasks.map((task) => (
-              <div key={task.id_batch} className="flex items-center justify-between rounded-xl border border-slate-200 p-4 hover:border-pink-300 hover:bg-pink-50/20 transition">
-                <div>
+              <div key={task.id_batch} className="rounded-xl border border-slate-200 p-4 hover:border-pink-300 transition">
+                <div className="mb-3">
                   <p className="font-semibold text-slate-800">{task.nama_batch}</p>
                   <p className="text-sm text-slate-600">{task.jenis_baju} · <span className="font-medium">{task.jumlah} pcs</span></p>
                   <p className="text-xs text-slate-400">Deadline: {task.deadline}</p>
                   {task.catatan && <p className="text-xs text-slate-400 mt-0.5">📝 {task.catatan}</p>}
                 </div>
+
+                {/* Upload Foto Hasil */}
+                <div className="mb-3 bg-slate-50 rounded-xl p-3 border border-slate-200">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    📸 Foto Hasil Finishing <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={e => handleFotoChange(task.id_batch, e.target.files[0])}
+                    className="block w-full text-sm text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-pink-50 file:text-pink-600 file:font-medium hover:file:bg-pink-100 cursor-pointer"
+                  />
+                  {fotoPreview[task.id_batch] && (
+                    <img
+                      src={fotoPreview[task.id_batch]}
+                      alt="Preview"
+                      className="mt-2 rounded-xl border border-slate-200 object-cover"
+                      style={{ maxHeight: 200, maxWidth: "100%" }}
+                    />
+                  )}
+                </div>
+
                 <button
                   onClick={() => handleQuickProcess(task)}
-                  disabled={processingId === task.id_batch}
-                  className="ml-4 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 px-4 py-2 text-sm font-semibold text-white hover:from-green-600 hover:to-emerald-600 disabled:opacity-60 transition whitespace-nowrap"
+                  disabled={processingId === task.id_batch || !fotoFile[task.id_batch]}
+                  className="w-full rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 px-4 py-2 text-sm font-semibold text-white hover:from-green-600 hover:to-emerald-600 disabled:opacity-60 transition"
                 >
-                  {processingId === task.id_batch ? "Memproses..." : "✅ Selesai"}
+                  {processingId === task.id_batch ? "Mengirim..." : "✅ Selesai & Kirim ke Customer"}
                 </button>
               </div>
             ))}

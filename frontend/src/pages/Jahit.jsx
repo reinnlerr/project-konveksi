@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
-const API_URL = "http://localhost/project-konveksi/Backend";
+const API_URL     = "http://localhost/project-konveksi/Backend";
+const BACKEND_URL = "http://localhost/project-konveksi/Backend";
 
 export default function Jahit() {
   const [history, setHistory]           = useState([]);
@@ -89,7 +90,6 @@ export default function Jahit() {
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <p className="font-semibold text-slate-800">{task.nama_batch}</p>
-                      {/* Badge revisi */}
                       {task.jumlah_revisi > 0 && (
                         <span className="rounded-full bg-orange-100 text-orange-600 px-2 py-0.5 text-xs font-medium">
                           🔄 Revisi ke-{task.jumlah_revisi}
@@ -104,13 +104,25 @@ export default function Jahit() {
                       <p className="text-xs text-slate-400 mt-0.5">📝 {task.catatan}</p>
                     )}
 
-                    {/* Alasan revisi dari customer */}
+                    {/* Alasan & foto revisi dari customer */}
                     {task.alasan_revisi && (
-                      <div className="mt-3 bg-orange-100 border border-orange-200 rounded-lg px-3 py-2">
-                        <p className="text-xs font-semibold text-orange-700 mb-1">
+                      <div className="mt-3 bg-orange-100 border border-orange-200 rounded-xl p-3 space-y-2">
+                        <p className="text-xs font-semibold text-orange-700">
                           💬 Permintaan Revisi dari Customer:
                         </p>
                         <p className="text-sm text-orange-800">{task.alasan_revisi}</p>
+
+                        {task.foto_revisi && (
+                          <div>
+                            <p className="text-xs text-orange-600 mb-1 font-medium">📸 Foto Referensi:</p>
+                            <img
+                              src={`${BACKEND_URL}/${task.foto_revisi}`}
+                              alt="Foto Referensi Revisi"
+                              className="rounded-xl border border-orange-200 object-cover"
+                              style={{ maxHeight: 200, maxWidth: "100%" }}
+                            />
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
