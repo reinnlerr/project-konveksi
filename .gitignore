@@ -2,3 +2,7 @@ node_modules/
 dist/
 .env
 .vite/
+Backend/uploads/finishing/*
+Backend/uploads/revisi/*
+!Backend/uploads/finishing/.gitkeep
+!Backend/uploads/revisi/.gitkeep
