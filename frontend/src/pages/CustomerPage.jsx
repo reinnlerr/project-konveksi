@@ -268,10 +268,15 @@ export default function CustomerPage({ user, onLogout }) {
             ) : (
               orders.map((order) => (
                 <div key={order.id_order} className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className="font-semibold text-gray-800">{order.jenis_baju}</p>
-                      <p className="text-sm text-gray-500 mt-1">{order.jumlah} pcs · Deadline: {order.deadline}</p>
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-mono font-semibold text-pink-500 bg-pink-50 px-2 py-0.5 rounded-full">
+                #{order.id_order}
+          </span>
+        <p className="font-semibold text-gray-800">{order.jenis_baju}</p>
+      </div>
+      <p className="text-sm text-gray-500 mt-1">{order.jumlah} pcs · Deadline: {order.deadline}</p>
                       {order.catatan && <p className="text-sm text-gray-400 mt-1">📝 {order.catatan}</p>}
                     </div>
                     <span className={`text-xs font-medium px-3 py-1 rounded-full ${statusColor[order.status] || "bg-gray-100 text-gray-600"}`}>
