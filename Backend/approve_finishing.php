@@ -57,8 +57,7 @@ if (!$order) {
     exit;
 }
 
-// Update ke pengiriman
-$upd = mysqli_prepare($koneksi, "UPDATE orders SET status = 'pengiriman' WHERE id_order = ?");
+$upd = mysqli_prepare($koneksi, "UPDATE orders SET status = 'menunggu_pembayaran' WHERE id_order = ?");
 mysqli_stmt_bind_param($upd, "i", $id_order);
 
 if (mysqli_stmt_execute($upd)) {
