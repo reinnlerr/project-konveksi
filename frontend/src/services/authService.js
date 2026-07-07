@@ -1,4 +1,4 @@
-const API_URL = "http://localhost/project-konveksi/Backend";
+const API_URL = "http://localhost/project-konveksi-main/project-konveksi-main/Backend";
 
 export async function loginUser({ email, password }) {
   try {

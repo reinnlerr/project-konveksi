@@ -53,9 +53,8 @@ function App() {
       navigate("/dashboard");
     } else if (result.user.role === "customer") {
       navigate("/customer");
-    } else if (result.user.role === "karyawan") {
-      navigate("/select-role");
     } else if (["bahan", "cutting", "jahit", "finishing", "pengiriman"].includes(result.user.role)) {
+      // Karyawan langsung masuk ke halaman divisi yang sudah di-assign admin
       navigate(`/role/${result.user.role}`);
     } else {
       setLoginError("Role tidak valid. Hubungi administrator.");
@@ -122,7 +121,7 @@ function App() {
   };
 
   const isKaryawan = Boolean(user) &&
-    (user?.role === "karyawan" || ["bahan", "cutting", "jahit", "finishing", "pengiriman"].includes(user?.role));
+    ["bahan", "cutting", "jahit", "finishing", "pengiriman"].includes(user?.role);
 
   return (
     <Routes>

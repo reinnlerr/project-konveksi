@@ -1,11 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 
-const API_URL     = "http://localhost/project-konveksi/Backend";
-const BACKEND_URL = "http://localhost/project-konveksi/Backend";
+const API_URL     = "http://localhost/project-konveksi-main/project-konveksi-main/Backend";
+const BACKEND_URL = "http://localhost/project-konveksi-main/project-konveksi-main/Backend";
 
 const fmt = (n) => n ? `Rp ${parseInt(n).toLocaleString('id-ID')}` : '-';
 
-export default function PesananMasuk() {
+export default function PesananMasuk({ searchQuery }) {
   const [orders, setOrders]           = useState([]);
   const [revisi, setRevisi]           = useState([]);
   const [needPricing, setNeedPricing] = useState([]);
@@ -16,6 +16,8 @@ export default function PesananMasuk() {
   const [hargaLoading, setHargaLoading] = useState(null);
   const [hargaMsg, setHargaMsg]       = useState({});
   const [konfirmasiLoading, setKonfirmasiLoading] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastRefresh, setLastRefresh]   = useState(null);
   const token = localStorage.getItem("token");
 
   const fetchOrders = async () => {
@@ -50,7 +52,14 @@ export default function PesananMasuk() {
     } catch {}
   };
 
-  useEffect(() => { fetchOrders(); fetchRevisi(); fetchNeedPricing(); fetchPembayaran(); }, []);
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await Promise.all([fetchOrders(), fetchRevisi(), fetchNeedPricing(), fetchPembayaran()]);
+    setLastRefresh(new Date());
+    setIsRefreshing(false);
+  };
+
+  useEffect(() => { handleRefresh(); }, []);
 
   const handleApprove = async (id_order) => {
     if (!window.confirm("Proses pesanan ini ke tahap Bahan?")) return;
@@ -98,9 +107,53 @@ export default function PesananMasuk() {
     setKonfirmasiLoading(null);
   };
 
-  const revisiCount  = revisi.length;
-  const perluKonfirmasi = pembayaran.filter(p => p.status_order === "menunggu_konfirmasi");
-  const lunasList    = pembayaran.filter(p => p.status === "lunas");
+  // Filter dinamis berdasarkan searchQuery
+  const filteredOrders = useMemo(() => {
+    if (!searchQuery) return orders;
+    const query = searchQuery.toLowerCase().trim();
+    return orders.filter(o => 
+      String(o.id_order || "").toLowerCase().includes(query) ||
+      String(o.jenis_baju || "").toLowerCase().includes(query) ||
+      String(o.status || "").toLowerCase().includes(query) ||
+      String(o.id_batch || "").toLowerCase().includes(query)
+    );
+  }, [orders, searchQuery]);
+
+  const filteredRevisi = useMemo(() => {
+    if (!searchQuery) return revisi;
+    const query = searchQuery.toLowerCase().trim();
+    return revisi.filter(r => 
+      String(r.id_order || "").toLowerCase().includes(query) ||
+      String(r.jenis_baju || "").toLowerCase().includes(query) ||
+      String(r.nama_batch || "").toLowerCase().includes(query) ||
+      String(r.email_customer || "").toLowerCase().includes(query)
+    );
+  }, [revisi, searchQuery]);
+
+  const filteredNeedPricing = useMemo(() => {
+    if (!searchQuery) return needPricing;
+    const query = searchQuery.toLowerCase().trim();
+    return needPricing.filter(o => 
+      String(o.id_order || "").toLowerCase().includes(query) ||
+      String(o.jenis_baju || "").toLowerCase().includes(query) ||
+      String(o.email_customer || "").toLowerCase().includes(query)
+    );
+  }, [needPricing, searchQuery]);
+
+  const filteredPembayaran = useMemo(() => {
+    if (!searchQuery) return pembayaran;
+    const query = searchQuery.toLowerCase().trim();
+    return pembayaran.filter(p => 
+      String(p.id_order || "").toLowerCase().includes(query) ||
+      String(p.jenis_baju || "").toLowerCase().includes(query) ||
+      String(p.email_customer || "").toLowerCase().includes(query) ||
+      String(p.nama_customer || "").toLowerCase().includes(query)
+    );
+  }, [pembayaran, searchQuery]);
+
+  const revisiCount  = filteredRevisi.length;
+  const perluKonfirmasi = filteredPembayaran.filter(p => p.status_order === "menunggu_konfirmasi");
+  const lunasList    = filteredPembayaran.filter(p => p.status === "lunas");
 
   const tabs = [
     { key:"pesanan",    label:"📋 Pesanan Masuk" },
@@ -110,6 +163,32 @@ export default function PesananMasuk() {
 
   return (
     <div className="space-y-4">
+      {/* Refresh Bar */}
+      <div className="flex items-center justify-between mb-1 flex-wrap gap-2">
+        <div className="flex items-center gap-2">
+          <span className="relative flex h-2.5 w-2.5">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
+          </span>
+          <span className="text-xs text-slate-500">Live</span>
+          {lastRefresh && (
+            <span className="text-xs text-slate-400">
+              · {lastRefresh.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+            </span>
+          )}
+        </div>
+        <button
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+          className="flex items-center gap-1.5 text-xs text-pink-600 border border-pink-200 bg-pink-50 hover:bg-pink-100 rounded-xl px-3 py-1.5 transition disabled:opacity-50 font-medium"
+        >
+          <svg className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          {isRefreshing ? "Memuat..." : "Refresh"}
+        </button>
+      </div>
+
       {/* Tabs */}
       <div className="flex gap-2 flex-wrap">
         {tabs.map(t=>(
@@ -145,9 +224,9 @@ export default function PesananMasuk() {
                 </tr>
               </thead>
               <tbody>
-                {orders.length === 0 ? (
-                  <tr><td colSpan="6" className="p-8 text-center text-slate-400">Belum ada pesanan.</td></tr>
-                ) : orders.map(o=>(
+                {filteredOrders.length === 0 ? (
+                  <tr><td colSpan="6" className="p-8 text-center text-slate-400">Tidak ada pesanan yang cocok.</td></tr>
+                ) : filteredOrders.map(o=>(
                   <tr key={o.id_order} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                     <td className="p-4 font-medium text-slate-800">#{o.id_order}</td>
                     <td className="p-4">{o.jenis_baju}</td>
@@ -187,11 +266,11 @@ export default function PesananMasuk() {
       {/* ── Riwayat Revisi ── */}
       {activeTab === "revisi" && (
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
-          {revisi.length === 0 ? (
-            <div className="text-center py-8 text-slate-400">Belum ada riwayat revisi.</div>
+          {filteredRevisi.length === 0 ? (
+            <div className="text-center py-8 text-slate-400">Tidak ada riwayat revisi yang cocok.</div>
           ) : (
             <div className="space-y-4">
-              {revisi.map(r=>(
+              {filteredRevisi.map(r=>(
                 <div key={r.id_revisi} className="rounded-xl border border-red-100 bg-red-50 p-4">
                   <div className="flex items-start justify-between gap-4">
                     <div className="space-y-1 flex-1">
@@ -229,11 +308,11 @@ export default function PesananMasuk() {
         <div className="space-y-4">
 
           {/* Belum ditagih */}
-          {needPricing.length > 0 && (
+          {filteredNeedPricing.length > 0 && (
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
               <h3 className="text-base font-semibold text-slate-800 mb-4">💡 Perlu Penetapan Harga</h3>
               <div className="space-y-4">
-                {needPricing.map(o=>(
+                {filteredNeedPricing.map(o=>(
                   <div key={o.id_order} className="rounded-xl border border-yellow-200 bg-yellow-50 p-4">
                     <div className="flex items-start justify-between gap-4 flex-wrap">
                       <div>
@@ -336,9 +415,9 @@ export default function PesananMasuk() {
             </div>
           )}
 
-          {needPricing.length===0 && perluKonfirmasi.length===0 && lunasList.length===0 && (
+          {filteredNeedPricing.length===0 && perluKonfirmasi.length===0 && lunasList.length===0 && (
             <div className="bg-white rounded-2xl p-8 text-center text-slate-400 shadow-sm border border-slate-100">
-              Belum ada data pembayaran.
+              Tidak ada data pembayaran yang cocok.
             </div>
           )}
         </div>

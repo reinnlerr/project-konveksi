@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 
-const API_URL = "http://localhost/project-konveksi/Backend";
+const API_URL = "http://localhost/project-konveksi-main/project-konveksi-main/Backend";
 
 // ← Hapus "karyawan (Pilih Divisi)", admin langsung assign divisi spesifik
 const roleOptions = [
@@ -22,7 +22,7 @@ const roleBadge = {
   pengiriman: "bg-indigo-100 text-indigo-700",
 };
 
-export default function ManajemenUser() {
+export default function ManajemenUser({ searchQuery }) {
   const [users, setUsers]           = useState([]);
   const [loading, setLoading]       = useState(false);
   const [error, setError]           = useState("");
@@ -43,6 +43,18 @@ export default function ManajemenUser() {
   };
 
   useEffect(() => { fetchUsers(); }, []);
+
+  const filteredUsers = useMemo(() => {
+    if (!searchQuery) return users;
+    const query = searchQuery.toLowerCase().trim();
+    return users.filter((u) => {
+      const matchEmail = String(u.Email || "").toLowerCase().includes(query);
+      const matchRole  = String(u.role || "").toLowerCase().includes(query);
+      const matchNama  = String(u.nama || "").toLowerCase().includes(query);
+      const matchId    = String(u.id_user || "").toLowerCase().includes(query);
+      return matchEmail || matchRole || matchNama || matchId;
+    });
+  }, [users, searchQuery]);
 
   const handleAdd = async (e) => {
     e.preventDefault();
@@ -154,13 +166,16 @@ export default function ManajemenUser() {
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-100">
           <h3 className="text-base font-semibold text-slate-800">Daftar Semua User</h3>
-          <p className="text-sm text-slate-400 mt-0.5">{users.length} user terdaftar</p>
+          <p className="text-sm text-slate-400 mt-0.5">
+            {searchQuery ? `${filteredUsers.length} user ditemukan` : `${users.length} user terdaftar`}
+          </p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm text-slate-600">
             <thead className="bg-slate-50 text-slate-700 border-b border-slate-200">
               <tr>
                 <th className="px-6 py-3 font-semibold">ID</th>
+                <th className="px-6 py-3 font-semibold">Nama</th>
                 <th className="px-6 py-3 font-semibold">Email</th>
                 <th className="px-6 py-3 font-semibold">Role</th>
                 <th className="px-6 py-3 font-semibold">Terdaftar</th>
@@ -168,16 +183,17 @@ export default function ManajemenUser() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {users.length === 0 ? (
+              {filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="px-6 py-8 text-center text-slate-400">
-                    Belum ada user.
+                  <td colSpan="6" className="px-6 py-8 text-center text-slate-400">
+                    Tidak ada user yang cocok.
                   </td>
                 </tr>
               ) : (
-                users.map((u) => (
+                filteredUsers.map((u) => (
                   <tr key={u.id_user} className="hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-3 text-slate-400">#{u.id_user}</td>
+                    <td className="px-6 py-3 font-medium text-slate-800">{u.nama || "-"}</td>
                     <td className="px-6 py-3 font-medium text-slate-800">{u.Email}</td>
                     <td className="px-6 py-3">
                       <span className={`rounded-full px-3 py-1 text-xs font-medium ${roleBadge[u.role] || "bg-slate-100 text-slate-600"}`}>

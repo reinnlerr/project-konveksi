@@ -1,7 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
-const API_URL     = "http://localhost/project-konveksi/Backend";
-const BACKEND_URL = "http://localhost/project-konveksi/Backend";
+const API_URL = "http://localhost/project-konveksi-main/project-konveksi-main/Backend";
 
 const statusColor = {
   pending:             "bg-yellow-100 text-yellow-700",
@@ -22,6 +21,7 @@ const statusLabel = {
   jahit:               "Jahit",
   finishing:           "Finishing",
   menunggu_pembayaran: "Tagihan",
+  menunggu_konfirmasi: "Konfirmasi",
   pengiriman:          "Pengiriman",
   selesai:             "Selesai",
 };
@@ -34,6 +34,8 @@ const nomorNota = (id, tgl) => {
   return `INV-${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}-${String(id).padStart(4,'0')}`;
 };
 
+const POLL_INTERVAL = 15000;
+
 export default function CustomerPage({ user, onLogout }) {
   const [activePage, setActivePage] = useState("order");
   const [orders, setOrders]         = useState([]);
@@ -41,6 +43,9 @@ export default function CustomerPage({ user, onLogout }) {
   const [finishingPhotos, setFinishingPhotos] = useState({});
   const [nota, setNota]             = useState({}); // {id_order: nota}
   const [showNota, setShowNota]     = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastRefresh, setLastRefresh]   = useState(null);
+  const pollRef = useRef(null);
 
   // Order form
   const [form, setForm]       = useState({ jenis_baju:"", jumlah:"", deadline:"", catatan:"" });
@@ -74,12 +79,18 @@ export default function CustomerPage({ user, onLogout }) {
 
   const token = localStorage.getItem("token");
 
-  const fetchOrders = async () => {
+  const fetchOrders = async (showSpinner = false) => {
     try {
+      if (showSpinner) setIsRefreshing(true);
       const res  = await fetch(`${API_URL}/orders.php`, { headers: { Authorization: `Bearer ${token}` } });
       const data = await res.json();
-      if (data.status === "success") setOrders(data.data);
-    } catch { console.error("Gagal fetch orders"); }
+      // Backend filter berdasarkan id_user dari token → hanya pesanan milik customer ini
+      if (data.status === "success") {
+        setOrders(data.data);
+        setLastRefresh(new Date());
+      }
+    } catch { /* silent */ }
+    finally { if (showSpinner) setIsRefreshing(false); }
   };
 
   const fetchPayments = async () => {
@@ -92,6 +103,10 @@ export default function CustomerPage({ user, onLogout }) {
         setPayments(map);
       }
     } catch { console.error("Gagal fetch payments"); }
+  };
+
+  const refreshAll = async (showSpinner = true) => {
+    await Promise.all([fetchOrders(showSpinner), fetchPayments()]);
   };
 
   const fetchProfile = async () => {
@@ -121,13 +136,23 @@ export default function CustomerPage({ user, onLogout }) {
     } catch {}
   };
 
-  useEffect(() => { fetchOrders(); fetchPayments(); fetchProfile(); }, []);
+  useEffect(() => { refreshAll(false); fetchProfile(); }, []);
   useEffect(() => {
     orders.forEach(order => {
       if (order.status === "finishing" && order.id_batch && !finishingPhotos[order.id_batch])
         fetchFinishingPhoto(order.id_batch);
     });
   }, [orders]);
+
+  useEffect(() => {
+    if (activePage === "status") {
+      refreshAll(true);
+      pollRef.current = setInterval(() => refreshAll(false), POLL_INTERVAL);
+    } else {
+      if (pollRef.current) clearInterval(pollRef.current);
+    }
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+  }, [activePage]);
 
   const handleSubmitOrder = async (e) => {
     e.preventDefault(); setError(""); setSuccess("");
@@ -340,11 +365,66 @@ export default function CustomerPage({ user, onLogout }) {
         {/* ── Status Pesanan ── */}
         {activePage === "status" && (
           <div className="space-y-4">
-            {orders.length === 0 ? (
-              <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center text-gray-400">Belum ada pesanan.</div>
-            ) : orders.map(order => {
+
+            {/* Toolbar: Live indicator + last refresh + refresh button */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
+                </span>
+                <span className="text-xs text-gray-500">Live · Refresh otomatis setiap 15 detik</span>
+                {lastRefresh && (
+                  <span className="text-xs text-gray-400">
+                    · Terakhir: {lastRefresh.toLocaleTimeString('id-ID', {hour:'2-digit',minute:'2-digit',second:'2-digit'})}
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={() => refreshAll(true)}
+                disabled={isRefreshing}
+                className="flex items-center gap-1.5 text-xs text-pink-600 border border-pink-200 bg-pink-50 hover:bg-pink-100 rounded-xl px-3 py-1.5 transition disabled:opacity-50 font-medium"
+              >
+                <svg className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                {isRefreshing ? 'Memuat...' : 'Refresh'}
+              </button>
+            </div>
+
+            {/* Loading skeleton */}
+            {isRefreshing && orders.length === 0 && (
+              <div className="space-y-3">
+                {[1,2].map(i => (
+                  <div key={i} className="bg-white rounded-2xl border border-gray-100 p-5 animate-pulse">
+                    <div className="h-4 bg-gray-200 rounded w-1/3 mb-2"></div>
+                    <div className="h-3 bg-gray-100 rounded w-1/2"></div>
+                    <div className="mt-4 h-2 bg-gray-100 rounded-full"></div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Empty state untuk customer baru */}
+            {!isRefreshing && orders.length === 0 && (
+              <div className="bg-white rounded-2xl border border-dashed border-gray-200 p-12 text-center">
+                <div className="text-5xl mb-4">📦</div>
+                <h3 className="text-base font-semibold text-gray-700 mb-1">Belum ada pesanan</h3>
+                <p className="text-sm text-gray-400 mb-4">Kamu belum memiliki pesanan apapun.<br/>Buat pesanan pertamamu sekarang!</p>
+                <button
+                  onClick={() => setActivePage("order")}
+                  className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-pink-500 to-rose-500 px-5 py-2 text-sm font-semibold text-white transition hover:from-pink-600 hover:to-rose-600"
+                >
+                  📋 Buat Order Sekarang
+                </button>
+              </div>
+            )}
+
+            {orders.map(order => {
               const pay = payments[order.id_order];
-              const pidx = progressStatus.indexOf(order.status === "menunggu_konfirmasi" ? "menunggu_pembayaran" : order.status);
+              // Normalisasi: menunggu_konfirmasi dianggap sudah di tahap menunggu_pembayaran untuk progress
+              const effectiveStatus = order.status === "menunggu_konfirmasi" ? "menunggu_pembayaran" : order.status;
+              const pidx = progressStatus.indexOf(effectiveStatus);
               return (
                 <div key={order.id_order} className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
                   <div className="flex items-start justify-between">
@@ -365,14 +445,38 @@ export default function CustomerPage({ user, onLogout }) {
                     </span>
                   </div>
 
-                  {/* Progress bar */}
-                  <div className="mt-4">
-                    <div className="flex justify-between text-xs text-gray-400 mb-1">
-                      {progressStatus.map(s=><span key={s}>{statusLabel[s]}</span>)}
-                    </div>
-                    <div className="w-full bg-gray-100 rounded-full h-1.5">
-                      <div className="bg-gradient-to-r from-pink-500 to-rose-500 h-1.5 rounded-full transition-all"
-                        style={{width:`${(pidx+1)/progressStatus.length*100}%`}} />
+                  {/* Step indicator progress */}
+                  <div className="mt-5 overflow-x-auto">
+                    <div className="flex items-center min-w-max gap-0">
+                      {progressStatus.map((s, i) => {
+                        const done    = i < pidx;
+                        const current = i === pidx;
+                        const isLast  = i === progressStatus.length - 1;
+                        return (
+                          <div key={s} className="flex items-center">
+                            <div className="flex flex-col items-center gap-1">
+                              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all
+                                ${
+                                  done    ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white' :
+                                  current ? 'bg-pink-500 text-white ring-4 ring-pink-100 scale-110' :
+                                            'bg-gray-100 text-gray-400'
+                                }`}>
+                                {done ? '✓' : i + 1}
+                              </div>
+                              <span className={`text-[9px] font-medium whitespace-nowrap ${
+                                done || current ? 'text-pink-600' : 'text-gray-400'
+                              }`}>
+                                {statusLabel[s]}
+                              </span>
+                            </div>
+                            {!isLast && (
+                              <div className={`h-0.5 w-6 mx-0.5 mb-4 transition-all ${
+                                done ? 'bg-gradient-to-r from-pink-500 to-rose-400' : 'bg-gray-200'
+                              }`} />
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
 
@@ -381,7 +485,7 @@ export default function CustomerPage({ user, onLogout }) {
                     <div className="mt-4 bg-orange-50 border border-orange-200 rounded-xl p-4 space-y-3">
                       <p className="text-sm font-semibold text-orange-700">🎉 Pesananmu selesai diproses! Cek foto hasilnya:</p>
                       {finishingPhotos[order.id_batch] ? (
-                        <img src={`${BACKEND_URL}/${finishingPhotos[order.id_batch]}`} alt="Hasil"
+                        <img src={`${API_URL}/${finishingPhotos[order.id_batch]}`} alt="Hasil"
                           className="w-full max-w-sm rounded-xl border border-orange-200 object-cover" style={{maxHeight:280}} />
                       ) : (
                         <div className="bg-white border border-orange-200 rounded-xl p-4 text-center text-sm text-gray-400">⏳ Memuat foto...</div>

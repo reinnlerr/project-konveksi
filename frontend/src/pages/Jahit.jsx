@@ -1,36 +1,73 @@
 import { useEffect, useState } from "react";
 
-const API_URL     = "http://localhost/project-konveksi/Backend";
-const BACKEND_URL = "http://localhost/project-konveksi/Backend";
+const API_URL = "http://localhost/project-konveksi-main/project-konveksi-main/Backend";
+
+function RefreshBar({ onRefresh, isRefreshing, lastRefresh }) {
+  return (
+    <div className="flex items-center justify-between mb-1">
+      <div className="flex items-center gap-2">
+        <span className="relative flex h-2.5 w-2.5">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
+        </span>
+        <span className="text-xs text-slate-500">Live</span>
+        {lastRefresh && (
+          <span className="text-xs text-slate-400">
+            · {lastRefresh.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+          </span>
+        )}
+      </div>
+      <button
+        onClick={onRefresh}
+        disabled={isRefreshing}
+        className="flex items-center gap-1.5 text-xs text-pink-600 border border-pink-200 bg-pink-50 hover:bg-pink-100 rounded-xl px-3 py-1.5 transition disabled:opacity-50 font-medium"
+      >
+        <svg className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        </svg>
+        {isRefreshing ? "Memuat..." : "Refresh"}
+      </button>
+    </div>
+  );
+}
 
 export default function Jahit() {
   const [history, setHistory]           = useState([]);
   const [tasks, setTasks]               = useState([]);
   const [processingId, setProcessingId] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastRefresh, setLastRefresh]   = useState(null);
   const token = localStorage.getItem("token");
   const user  = JSON.parse(localStorage.getItem("currentUser") || "{}");
 
   const fetchHistory = async () => {
     try {
       const res  = await fetch(`${API_URL}/history.php?type=jahit`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
       if (data.status === "success") setHistory(data.data);
-    } catch { console.error("Gagal fetch history jahit"); }
+    } catch { /* silent */ }
   };
 
   const fetchTasks = async () => {
     try {
       const res  = await fetch(`${API_URL}/pending_work.php?role=jahit`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
       if (data.status === "success") setTasks(data.data);
-    } catch { console.error("Gagal fetch tugas jahit"); }
+    } catch { /* silent */ }
   };
 
-  useEffect(() => { fetchHistory(); fetchTasks(); }, []);
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await Promise.all([fetchHistory(), fetchTasks()]);
+    setLastRefresh(new Date());
+    setIsRefreshing(false);
+  };
+
+  useEffect(() => { handleRefresh(); }, []);
 
   const handleQuickProcess = async (task) => {
     setProcessingId(task.id_batch);
@@ -56,12 +93,13 @@ export default function Jahit() {
         fetchHistory();
         fetchTasks();
       }
-    } catch { console.error("Quick process jahit gagal"); }
+    } catch { /* silent */ }
     setProcessingId(null);
   };
 
   return (
     <div className="space-y-4">
+      <RefreshBar onRefresh={handleRefresh} isRefreshing={isRefreshing} lastRefresh={lastRefresh} />
 
       {/* Tugas Aktif */}
       <div className="card p-5 border-l-4 border-pink-500">
@@ -111,12 +149,11 @@ export default function Jahit() {
                           💬 Permintaan Revisi dari Customer:
                         </p>
                         <p className="text-sm text-orange-800">{task.alasan_revisi}</p>
-
                         {task.foto_revisi && (
                           <div>
                             <p className="text-xs text-orange-600 mb-1 font-medium">📸 Foto Referensi:</p>
                             <img
-                              src={`${BACKEND_URL}/${task.foto_revisi}`}
+                              src={`${API_URL}/${task.foto_revisi}`}
                               alt="Foto Referensi Revisi"
                               className="rounded-xl border border-orange-200 object-cover"
                               style={{ maxHeight: 200, maxWidth: "100%" }}

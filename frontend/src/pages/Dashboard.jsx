@@ -36,29 +36,41 @@ const navByRole = {
 export default function Dashboard({ user, initialPage = "Dashboard", onLogout, dashboardRole }) {
   const [activePage, setActivePage] = useState(initialPage);
   const [toast, setToast]           = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const currentRole = dashboardRole || user?.role || "cutting";
   const currentNav  = navByRole[currentRole] || ["Dashboard"];
 
+  const handlePageChange = (page) => {
+    setActivePage(page);
+    setSearchQuery("");
+  };
+
   const content = useMemo(() => {
-    if (activePage === "Dashboard")        return <DashboardPage user={user} />;
-    if (activePage === "Pesanan Masuk")    return <PesananMasuk />;
-    if (activePage === "Manajemen User")   return <ManajemenUser />;
-    if (activePage === "Laporan")          return <ReportPage />;
+    if (activePage === "Dashboard")        return <DashboardPage user={user} searchQuery={searchQuery} />;
+    if (activePage === "Pesanan Masuk")    return <PesananMasuk searchQuery={searchQuery} />;
+    if (activePage === "Manajemen User")   return <ManajemenUser searchQuery={searchQuery} />;
+    if (activePage === "Laporan")          return <ReportPage searchQuery={searchQuery} />;
     if (activePage === "Bahan Masuk")      return <BahanMasuk />;
     if (activePage === "Cutting")          return <Cutting />;
     if (activePage === "Jahit")            return <Jahit />;
     if (activePage === "Finishing")        return <Finishing />;
     if (activePage === "Pengiriman")       return <Pengiriman />;
-    return <DashboardPage user={user} />;
-  }, [activePage, user]);
+    return <DashboardPage user={user} searchQuery={searchQuery} />;
+  }, [activePage, user, searchQuery]);
 
   return (
     <div className="min-h-screen bg-slate-100 md:flex">
-      <Sidebar navItems={currentNav} activePage={activePage} onChange={setActivePage} />
+      <Sidebar navItems={currentNav} activePage={activePage} onChange={handlePageChange} />
       <main className="flex-1 p-4 md:p-8">
         <div className="mx-auto max-w-full space-y-5">
-          <PageHeader title={pageTitles[activePage] || activePage} user={user} onLogout={onLogout} />
+          <PageHeader
+            title={pageTitles[activePage] || activePage}
+            user={user}
+            onLogout={onLogout}
+            searchVal={searchQuery}
+            onSearchChange={setSearchQuery}
+          />
           {content}
         </div>
       </main>

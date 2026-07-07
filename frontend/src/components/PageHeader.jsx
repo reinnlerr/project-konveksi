@@ -1,16 +1,8 @@
 import { Search } from "lucide-react";
 import { Card } from "./ui";
 
-function BellIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" width="18" height="18">
-      <path d="M6 8a6 6 0 1112 0v5l2 2H4l2-2z" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M10 19a2 2 0 004 0" strokeLinecap="round" />
-    </svg>
-  );
-}
 
-export default function PageHeader({ title, user, onLogout }) {
+export default function PageHeader({ title, user, onLogout, searchVal, onSearchChange }) {
   const initials = (user?.name || "User")
     .split(" ")
     .slice(0, 2)
@@ -29,13 +21,12 @@ export default function PageHeader({ title, user, onLogout }) {
           <Search size={16} className="text-gray-400" />
           <input
             className="flex-1 bg-transparent text-sm text-gray-800 outline-none placeholder:text-gray-400"
-            placeholder="Cari batch..."
+            placeholder={title === "Manajemen User" ? "Cari user..." : "Cari batch..."}
+            value={searchVal || ""}
+            onChange={(e) => onSearchChange && onSearchChange(e.target.value)}
           />
         </label>
 
-        <button className="rounded-xl border border-slate-300 bg-white p-2.5 text-slate-700 transition hover:bg-slate-100">
-          <BellIcon />
-        </button>
 
         <div className="flex items-center gap-2 rounded-xl bg-slate-100 px-3 py-2">
           <div className="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-r from-pink-500 to-rose-500 text-xs font-semibold text-white">
