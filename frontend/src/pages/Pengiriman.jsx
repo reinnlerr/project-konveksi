@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
-const API_URL     = "http://localhost/project-konveksi-main/project-konveksi-main/Backend";
-const BACKEND_URL = "http://localhost/project-konveksi-main/project-konveksi-main/Backend";
+const API_URL     = "http://localhost/project-konveksi/Backend";
+const BACKEND_URL = "http://localhost/project-konveksi/Backend";
 
 const fmt = (n) => n ? `Rp ${parseInt(n).toLocaleString('id-ID')}` : '-';
 const nomorNota = (id, tgl) => {

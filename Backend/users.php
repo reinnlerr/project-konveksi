@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=UTF-8");
 header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
@@ -34,8 +34,7 @@ function verifyToken($auth) {
 }
 
 // ── Cek token ──
-$headers = getallheaders();
-$auth    = isset($headers['Authorization']) ? $headers['Authorization'] : '';
+$auth    = getAuthorizationHeader();
 $user    = verifyToken($auth);
 
 if (!$user) {

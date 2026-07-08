@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, useMemo } from "react";
 import { Card } from "../components/ui";
 
-const API_URL = "http://localhost/project-konveksi-main/project-konveksi-main/Backend";
+const API_URL = "http://localhost/project-konveksi/Backend";
 
 function Icon({ path }) {
   return (

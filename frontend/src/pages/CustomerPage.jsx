@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
-const API_URL = "http://localhost/project-konveksi-main/project-konveksi-main/Backend";
+const API_URL = "http://localhost/project-konveksi/Backend";
 
 const statusColor = {
   pending:             "bg-yellow-100 text-yellow-700",

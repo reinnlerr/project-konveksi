@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-const API_URL = "http://localhost/project-konveksi-main/project-konveksi-main/Backend";
+const API_URL = "http://localhost/project-konveksi/Backend";
 
 function RefreshBar({ onRefresh, isRefreshing, lastRefresh }) {
   return (

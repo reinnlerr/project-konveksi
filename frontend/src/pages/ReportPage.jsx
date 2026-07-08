@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import { Card, EmptyState } from "../components/ui";
 import { Download, Filter, X } from "lucide-react";
 
-const API_URL = "http://localhost/project-konveksi-main/project-konveksi-main/Backend";
+const API_URL = "http://localhost/project-konveksi/Backend";
 
 const MONTHS = [
   "Januari","Februari","Maret","April","Mei","Juni",

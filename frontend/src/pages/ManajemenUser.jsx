@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 
-const API_URL = "http://localhost/project-konveksi-main/project-konveksi-main/Backend";
+const API_URL = "http://localhost/project-konveksi/Backend";
 
 // ← Hapus "karyawan (Pilih Divisi)", admin langsung assign divisi spesifik
 const roleOptions = [

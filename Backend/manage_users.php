@@ -24,8 +24,7 @@ function verifyToken($auth) {
     return $decoded;
 }
 
-$headers = getallheaders();
-$auth    = isset($headers['Authorization']) ? $headers['Authorization'] : '';
+$auth    = getAuthorizationHeader();
 $user    = verifyToken($auth);
 
 if (!$user) {
@@ -44,7 +43,7 @@ if ($user['role'] !== 'admin') {
 // ── GET: ambil semua user ──
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $result = mysqli_query($koneksi, "
-        SELECT id_user, Email, role, created_at 
+        SELECT id_user, Email, role, created_at, nama 
         FROM users 
         ORDER BY created_at DESC
     ");

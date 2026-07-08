@@ -21,8 +21,7 @@ function verifyToken($auth) {
     return $decoded;
 }
 
-$headers = getallheaders();
-$user    = verifyToken(isset($headers['Authorization']) ? $headers['Authorization'] : '');
+$user    = verifyToken(getAuthorizationHeader());
 
 if (!$user) { http_response_code(401); echo json_encode(["status"=>"error","message"=>"Token tidak valid."]); exit; }
 
